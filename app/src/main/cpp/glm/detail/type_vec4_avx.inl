@@ -30,12 +30,11 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
-namespace glm{
-namespace detail
-{
+namespace glm {
+    namespace detail {
 
-}//namespace detail
+    }//namespace detail
 
-	
+
 
 }//namespace glm

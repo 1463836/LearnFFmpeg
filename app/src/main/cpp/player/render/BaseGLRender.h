@@ -26,7 +26,7 @@ struct TransformMatrix {
     int angleX;
     int angleY;
 
-    TransformMatrix():
+    TransformMatrix() :
             translateX(0),
             translateY(0),
             scaleX(1.0),
@@ -34,12 +34,11 @@ struct TransformMatrix {
             degree(0),
             mirror(0),
             angleX(0),
-            angleY(0)
-    {
+            angleY(0) {
 
     }
-    void Reset()
-    {
+
+    void Reset() {
         translateX = 0;
         translateY = 0;
         scaleX = 1.0;
@@ -52,17 +51,19 @@ struct TransformMatrix {
 
 class BaseGLRender {
 public:
-    virtual ~BaseGLRender(){}
+    virtual ~BaseGLRender() {}
 
-    virtual void OnSurfaceCreated() = 0;
-    virtual void OnSurfaceChanged(int w, int h) = 0;
-    virtual void OnDrawFrame() = 0;
+    virtual void onSurfaceCreated() = 0;
 
-    virtual void UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) = 0;
+    virtual void onSurfaceChanged(int w, int h) = 0;
 
-    virtual void UpdateMVPMatrix(TransformMatrix * pTransformMatrix) {}
+    virtual void onDrawFrame() = 0;
 
-    virtual void SetTouchLoc(float touchX, float touchY) = 0;
+    virtual void updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) = 0;
+
+    virtual void updateMVPMatrix(TransformMatrix *pTransformMatrix) {}
+
+    virtual void setTouchLoc(float touchX, float touchY) = 0;
 };
 
 

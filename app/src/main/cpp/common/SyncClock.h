@@ -13,7 +13,7 @@
 
 class SyncClock {
 public:
-    SyncClock(){
+    SyncClock() {
         curPts = 0;
         lastUpdate = 0;
         lastPts = 0;

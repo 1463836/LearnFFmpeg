@@ -25,16 +25,15 @@ public:
         m_dataQueue = other.m_dataQueue;
     }
 
-    void Push(T new_value)
-    {
+    void Push(T new_value) {
         std::lock_guard<std::mutex> lk(m_mutex);
         m_dataQueue.push(new_value);
         m_condVar.notify_one();
     }
 
-    T Pop(){
+    T Pop() {
         std::unique_lock<std::mutex> lk(m_mutex);
-        if(Empty()) return nullptr;
+        if (Empty()) return nullptr;
         T res = m_dataQueue.front();
         m_dataQueue.pop();
         return res;
@@ -54,4 +53,5 @@ private:
     std::queue<T> m_dataQueue;
     std::condition_variable m_condVar;
 };
+
 #endif //LEARNFFMPEG_THREADSAFEQUEUE_H

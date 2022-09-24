@@ -52,7 +52,7 @@ public class Camera2Wrapper {
     private CameraDevice mCameraDevice;
     private String mCameraId;
     private String[] mSupportCameraIds;
-    private ImageReader mPreviewImageReader, mCaptureImageReader;
+    private ImageReader imageReaderPreview, imageReaderCapture;
     private Integer mSensorOrientation;
 
     private Semaphore mCameraLock = new Semaphore(1);
@@ -199,15 +199,15 @@ public class Camera2Wrapper {
 
     public void startCamera() {
         startBackgroundThread();
-        if (mPreviewImageReader == null && mPreviewSize != null) {
-            mPreviewImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mPreviewImageReader.setOnImageAvailableListener(mOnPreviewImageAvailableListener, mBackgroundHandler);
-            mPreviewSurface = mPreviewImageReader.getSurface();
+        if (imageReaderPreview == null && mPreviewSize != null) {
+            imageReaderPreview = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            imageReaderPreview.setOnImageAvailableListener(mOnPreviewImageAvailableListener, mBackgroundHandler);
+            mPreviewSurface = imageReaderPreview.getSurface();
         }
 
-        if (mCaptureImageReader == null && mPictureSize != null) {
-            mCaptureImageReader = ImageReader.newInstance(mPictureSize.getWidth(), mPictureSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mCaptureImageReader.setOnImageAvailableListener(mOnCaptureImageAvailableListener, mBackgroundHandler);
+        if (imageReaderCapture == null && mPictureSize != null) {
+            imageReaderCapture = ImageReader.newInstance(mPictureSize.getWidth(), mPictureSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            imageReaderCapture.setOnImageAvailableListener(mOnCaptureImageAvailableListener, mBackgroundHandler);
         }
 
         openCamera();
@@ -219,26 +219,26 @@ public class Camera2Wrapper {
             previewSurfaceTex.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             mPreviewSurface = new Surface(previewSurfaceTex);
         } else {
-            mPreviewImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mPreviewImageReader.setOnImageAvailableListener(mOnPreviewImageAvailableListener, mBackgroundHandler);
-            mPreviewSurface = mPreviewImageReader.getSurface();
+            imageReaderPreview = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            imageReaderPreview.setOnImageAvailableListener(mOnPreviewImageAvailableListener, mBackgroundHandler);
+            mPreviewSurface = imageReaderPreview.getSurface();
         }
 
-        if (mCaptureImageReader == null && mPictureSize != null) {
-            mCaptureImageReader = ImageReader.newInstance(mPictureSize.getWidth(), mPictureSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mCaptureImageReader.setOnImageAvailableListener(mOnCaptureImageAvailableListener, mBackgroundHandler);
+        if (imageReaderCapture == null && mPictureSize != null) {
+            imageReaderCapture = ImageReader.newInstance(mPictureSize.getWidth(), mPictureSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            imageReaderCapture.setOnImageAvailableListener(mOnCaptureImageAvailableListener, mBackgroundHandler);
         }
 
         openCamera();
     }
 
     public void stopCamera() {
-        if (mPreviewImageReader != null) {
-            mPreviewImageReader.setOnImageAvailableListener(null, null);
+        if (imageReaderPreview != null) {
+            imageReaderPreview.setOnImageAvailableListener(null, null);
         }
 
-        if (mCaptureImageReader != null) {
-            mCaptureImageReader.setOnImageAvailableListener(null, null);
+        if (imageReaderCapture != null) {
+            imageReaderCapture.setOnImageAvailableListener(null, null);
         }
         closeCamera();
         stopBackgroundThread();
@@ -304,14 +304,14 @@ public class Camera2Wrapper {
                 mCameraDevice.close();
                 mCameraDevice = null;
             }
-            if (null != mPreviewImageReader) {
-                mPreviewImageReader.close();
-                mPreviewImageReader = null;
+            if (null != imageReaderPreview) {
+                imageReaderPreview.close();
+                imageReaderPreview = null;
             }
 
-            if (null != mCaptureImageReader) {
-                mCaptureImageReader.close();
-                mCaptureImageReader = null;
+            if (null != imageReaderCapture) {
+                imageReaderCapture.close();
+                imageReaderCapture = null;
             }
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
@@ -348,8 +348,8 @@ public class Camera2Wrapper {
 
     private void createCaptureSession() {
         try {
-            if (null == mCameraDevice || null == mPreviewSurface || null == mCaptureImageReader) return;
-            mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mCaptureImageReader.getSurface()),
+            if (null == mCameraDevice || null == mPreviewSurface || null == imageReaderCapture) return;
+            mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, imageReaderCapture.getSurface()),
                     mSessionStateCallback, mBackgroundHandler);
 
         } catch (CameraAccessException e) {
@@ -415,7 +415,7 @@ public class Camera2Wrapper {
         final CaptureRequest.Builder captureBuilder;
         try {
             captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilder.addTarget(mCaptureImageReader.getSurface());
+            captureBuilder.addTarget(imageReaderCapture.getSurface());
 
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,

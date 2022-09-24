@@ -48,102 +48,118 @@ enum DecoderMsg {
 
 class DecoderBase : public Decoder {
 public:
-    DecoderBase()
-    {};
-    virtual~ DecoderBase()
-    {};
+    DecoderBase() {};
+
+    virtual~ DecoderBase() {};
+
     //开始播放
-    virtual void Start();
+    virtual void start();
+
     //暂停播放
-    virtual void Pause();
+    virtual void pause();
+
     //停止
-    virtual void Stop();
+    virtual void stop();
+
     //获取时长
-    virtual float GetDuration()
-    {
+    virtual float getDuration() {
         //ms to s
-        return m_Duration * 1.0f / 1000;
+        return duration * 1.0f / 1000;
     }
+
     //seek 到某个时间点播放
-    virtual void SeekToPosition(float position);
+    virtual void seekToPosition(float position);
+
     //当前播放的位置，用于更新进度条和音视频同步
-    virtual float GetCurrentPosition();
-    virtual void ClearCache()
-    {};
-    virtual void SetMessageCallback(void* context, MessageCallback callback)
-    {
-        m_MsgContext = context;
-        m_MsgCallback = callback;
+    virtual float getCurrentPosition();
+
+    virtual void clearCache() {};
+
+    virtual void setMessageCallback(void *context, MessageCallback callback) {
+        msgContext = context;
+        msgCallback = callback;
     }
+
     //设置音视频同步的回调
-    virtual void SetAVSyncCallback(void* context, AVSyncCallback callback)
-    {
+    virtual void SetAVSyncCallback(void *context, AVSyncCallback callback) {
         m_AVDecoderContext = context;
         m_AVSyncCallback = callback;
     }
 
 protected:
-    void * m_MsgContext = nullptr;
-    MessageCallback m_MsgCallback = nullptr;
-    virtual int Init(const char *url, AVMediaType mediaType);
-    virtual void UnInit();
-    virtual void OnDecoderReady() = 0;
-    virtual void OnDecoderDone() = 0;
-    //解码数据的回调
-    virtual void OnFrameAvailable(AVFrame *frame) = 0;
+    void *msgContext = nullptr;
+    MessageCallback msgCallback = nullptr;
 
-    AVCodecContext *GetCodecContext() {
-        return m_AVCodecContext;
+    virtual int init(const char *url, AVMediaType mediaType);
+
+    virtual void unInit();
+
+    virtual void onDecoderReady() = 0;
+
+    virtual void onDecoderDone() = 0;
+
+    //解码数据的回调
+    virtual void onFrameAvailable(AVFrame *frame) = 0;
+
+    AVCodecContext *getCodecContext() {
+        return codecContext;
     }
 
 private:
-    int InitFFDecoder();
-    void UnInitDecoder();
+    int initFFDecoder();
+
+    void unInitDecoder();
+
     //启动解码线程
-    void StartDecodingThread();
+    void startDecodingThread();
+
     //音视频解码循环
-    void DecodingLoop();
+    void decodingLoop();
+
     //更新显示时间戳
-    void UpdateTimeStamp();
+    void updateTimeStamp();
+
     //音视频同步
     long AVSync();
+
     //解码一个packet编码数据
-    int DecodeOnePacket();
+    int decodeOnePacket();
+
     //线程函数
-    static void DoAVDecoding(DecoderBase *decoder);
+    static void doAVDecoding(DecoderBase *decoder);
 
     //封装格式上下文
-    AVFormatContext *m_AVFormatContext = nullptr;
+    AVFormatContext *formatContext = nullptr;
     //解码器上下文
-    AVCodecContext  *m_AVCodecContext = nullptr;
+    AVCodecContext *codecContext = nullptr;
     //解码器
-    AVCodec         *m_AVCodec = nullptr;
+    AVCodec *codec = nullptr;
     //编码的数据包
-    AVPacket        *m_Packet = nullptr;
+    AVPacket *packet = nullptr;
     //解码的帧
-    AVFrame         *m_Frame = nullptr;
+    AVFrame *frame = nullptr;
     //数据流的类型
-    AVMediaType      m_MediaType = AVMEDIA_TYPE_UNKNOWN;
+    AVMediaType mediaType = AVMEDIA_TYPE_UNKNOWN;
     //文件地址
-    char       m_Url[MAX_PATH] = {0};
+    char url[MAX_PATH] = {0};
     //当前播放时间
-    long             m_CurTimeStamp = 0;
+    long m_CurTimeStamp = 0;
     //播放的起始时间
-    long             m_StartTimeStamp = -1;
+    long m_StartTimeStamp = -1;
     //总时长 ms
-    long             m_Duration = 0;
+    long duration = 0;
     //数据流索引
-    int              m_StreamIndex = -1;
+    int streamIndex = -1;
     //锁和条件变量
-    mutex               m_Mutex;
-    condition_variable  m_Cond;
-    thread             *m_Thread = nullptr;
+    mutex m_Mutex;
+    condition_variable condition;
+    thread *m_Thread = nullptr;
     //seek position
-    volatile float      m_SeekPosition = 0;
-    volatile bool       m_SeekSuccess = false;
+    volatile float seekPosition = 0;
+    volatile bool seekSuccess = false;
     //解码器状态
-    volatile int  m_DecoderState = STATE_UNKNOWN;
-    void* m_AVDecoderContext = nullptr;
+    volatile int decoderState = STATE_UNKNOWN;
+    void *m_AVDecoderContext = nullptr;
     AVSyncCallback m_AVSyncCallback = nullptr;//用作音视频同步
 };
 

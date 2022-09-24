@@ -8,67 +8,67 @@
 
 #include "PlayerWrapper.h"
 
-void PlayerWrapper::Init(JNIEnv *jniEnv, jobject obj, char *url, int playerType, int renderType,
+void PlayerWrapper::init(JNIEnv *jniEnv, jobject obj, char *url, int playerType, int renderType,
                          jobject surface) {
     switch (playerType) {
         case FFMEDIA_PLAYER:
-            m_MediaPlayer = new FFMediaPlayer();
+            mediaPlayer = new FFMediaPlayer();
             break;
         case HWCODEC_PLAYER:
-            m_MediaPlayer = new HWCodecPlayer();
+            mediaPlayer = new HWCodecPlayer();
             break;
         default:
             break;
     }
 
-    if(m_MediaPlayer)
-        m_MediaPlayer->Init(jniEnv, obj, url, renderType, surface);
+    if (mediaPlayer)
+        mediaPlayer->init(jniEnv, obj, url, renderType, surface);
 }
 
-void PlayerWrapper::UnInit() {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->UnInit();
-        delete m_MediaPlayer;
-        m_MediaPlayer = nullptr;
+void PlayerWrapper::unInit() {
+    if (mediaPlayer) {
+        mediaPlayer->unInit();
+        delete mediaPlayer;
+        mediaPlayer = nullptr;
     }
 }
 
-void PlayerWrapper::Play() {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->Play();
+void PlayerWrapper::play() {
+    if (mediaPlayer) {
+        mediaPlayer->play();
     }
 }
 
-void PlayerWrapper::Pause() {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->Pause();
+void PlayerWrapper::pause() {
+    if (mediaPlayer) {
+        mediaPlayer->pause();
     }
 }
 
-void PlayerWrapper::Stop() {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->Stop();
+void PlayerWrapper::stop() {
+    if (mediaPlayer) {
+        mediaPlayer->stop();
     }
 }
 
-void PlayerWrapper::SeekToPosition(float position) {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->SeekToPosition(position);
+void PlayerWrapper::seekToPosition(float position) {
+    if (mediaPlayer) {
+        mediaPlayer->seekToPosition(position);
     }
 
 }
 
-long PlayerWrapper::GetMediaParams(int paramType) {
-    if(m_MediaPlayer) {
-        return m_MediaPlayer->GetMediaParams(paramType);
+long PlayerWrapper::getMediaParams(int paramType) {
+    if (mediaPlayer) {
+        return mediaPlayer->getMediaParams(paramType);
     }
 
     return 0;
 }
 
-void PlayerWrapper::SetMediaParams(int paramType, jobject obj) {
-    if(m_MediaPlayer) {
-        m_MediaPlayer->SetMediaParams(paramType, obj);
+void PlayerWrapper::setMediaParams(int paramType, jobject obj) {
+    if (mediaPlayer) {
+        mediaPlayer->setMediaParams(paramType, obj);
     }
 
 }

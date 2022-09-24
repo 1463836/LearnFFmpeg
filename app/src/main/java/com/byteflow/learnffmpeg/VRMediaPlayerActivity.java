@@ -17,7 +17,6 @@ import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -26,7 +25,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.byteflow.learnffmpeg.R;
 import com.byteflow.learnffmpeg.media.FFMediaPlayer;
 import com.byteflow.learnffmpeg.media.MyGLSurfaceView;
 
@@ -41,9 +39,7 @@ import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_INIT_ERRO
 import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_READY;
 import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODING_TIME;
 import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_REQUEST_RENDER;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_GL_RENDER;
 import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_RENDER_3D_VR;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_RENDER_OPENGL;
 import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VR_3D_GL_RENDER;
 
 public class VRMediaPlayerActivity extends AppCompatActivity implements GLSurfaceView.Renderer, FFMediaPlayer.EventCallback, MyGLSurfaceView.OnGestureCallback, SensorEventListener {
@@ -57,7 +53,9 @@ public class VRMediaPlayerActivity extends AppCompatActivity implements GLSurfac
     private SeekBar mSeekBar = null;
     private boolean mIsTouch = false;
     private SensorManager mSensorManager;
-    private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/vr.mp4";
+//    private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/vr.mp4";
+
+    private String mVideoPath = "/sdcard/Movies/张学友-旧情绵绵.avi";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

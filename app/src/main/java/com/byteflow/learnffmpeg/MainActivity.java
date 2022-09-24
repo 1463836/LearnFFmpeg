@@ -8,12 +8,6 @@
 
 package com.byteflow.learnffmpeg;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -26,6 +20,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.byteflow.learnffmpeg.adapter.MyRecyclerViewAdapter;
 import com.byteflow.learnffmpeg.media.FFMediaPlayer;
@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int FF_STREAM_MEDIA_PLAYER = 7;
     private static final int FF_MEDIACODEC_PLAYER = 8;
 
-    private int mSampleSelectedIndex = -1;
+    private int mSampleSelectedIndex = 6;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mSampleSelectedIndex = -1;
         CommonUtils.copyAssetsDirToSDCard(this, "byteflow", "/sdcard");
         if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);

@@ -75,7 +75,6 @@ import java.util.Locale;
 import static com.byteflow.learnffmpeg.media.MediaRecorderContext.IMAGE_FORMAT_I420;
 import static com.byteflow.learnffmpeg.media.MediaRecorderContext.IMAGE_FORMAT_RGBA;
 import static com.byteflow.learnffmpeg.media.MediaRecorderContext.RECORDER_TYPE_AV;
-import static com.byteflow.learnffmpeg.media.MediaRecorderContext.RECORDER_TYPE_SINGLE_VIDEO;
 import static com.byteflow.learnffmpeg.view.RecordedButton.BUTTON_STATE_ONLY_RECORDER;
 
 
@@ -101,14 +100,14 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     public static final int SHADER_INDEX_LUT_C  = 9;
     public static final int SHADER_INDEX_NE     = 10; //Negative effect
     private RelativeLayout mSurfaceViewRoot;
-    protected FFMediaRecorder mMediaRecorder;
-    private Camera2Wrapper mCamera2Wrapper;
+    protected FFMediaRecorder ffMediaRecorder;
+    private Camera2Wrapper camera2Wrapper;
     private ImageButton mSwitchCamBtn, mSwitchRatioBtn;
-    protected GLSurfaceView mGLSurfaceView;
+    protected GLSurfaceView glSurfaceView;
     protected Size mRootViewSize, mScreenSize;
     private CaptureLayout mRecordedButton;
     private AudioRecorder mAudioRecorder;
-    protected MyGestureListener mGestureDetector;
+    protected MyGestureListener gestureListener;
     private int mShaderIndex = 0;
 
     @Override
@@ -130,8 +129,8 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 //                }
 //            }
 //        });
-        mGLSurfaceView = new GLSurfaceView(this);
-        mMediaRecorder = new FFMediaRecorder();
+        glSurfaceView = new GLSurfaceView(this);
+        ffMediaRecorder = new FFMediaRecorder();
 
         initViews();
     }
@@ -141,13 +140,13 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
         super.onResume();
         Toast.makeText(this, "左滑或右滑选择滤镜", Toast.LENGTH_LONG).show();
         if (hasPermissionsGranted(REQUEST_PERMISSIONS)) {
-            mCamera2Wrapper.startCamera();
+            camera2Wrapper.startCamera();
         } else {
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE);
         }
-        updateTransformMatrix(mCamera2Wrapper.getCameraId());
+        updateTransformMatrix(camera2Wrapper.getCameraId());
         if (mSurfaceViewRoot != null) {
-            updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+            updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
         }
     }
 
@@ -155,7 +154,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (hasPermissionsGranted(REQUEST_PERMISSIONS)) {
-                mCamera2Wrapper.startCamera();
+                camera2Wrapper.startCamera();
             } else {
                 Toast.makeText(this, "We need the camera permission.", Toast.LENGTH_SHORT).show();
             }
@@ -167,7 +166,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     @Override
     protected void onPause() {
         if (hasPermissionsGranted(REQUEST_PERMISSIONS)) {
-            mCamera2Wrapper.stopCamera();
+            camera2Wrapper.stopCamera();
         }
         super.onPause();
     }
@@ -175,7 +174,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mMediaRecorder.unInit();
+        ffMediaRecorder.unInit();
     }
 
     @Override
@@ -196,14 +195,14 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
         if (id == R.id.action_change_resolution) {
             showChangeSizeDialog();
         } else if (id == R.id.action_switch_camera) {
-            String cameraId = mCamera2Wrapper.getCameraId();
-            String[] cameraIds = mCamera2Wrapper.getSupportCameraIds();
+            String cameraId = camera2Wrapper.getCameraId();
+            String[] cameraIds = camera2Wrapper.getSupportCameraIds();
             if (cameraIds != null) {
                 for (int i = 0; i < cameraIds.length; i++) {
                     if (!cameraIds[i].equals(cameraId)) {
-                        mCamera2Wrapper.updateCameraId(cameraIds[i]);
+                        camera2Wrapper.updateCameraId(cameraIds[i]);
                         updateTransformMatrix(cameraIds[i]);
-                        updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+                        updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
                         break;
                     }
                 }
@@ -215,14 +214,14 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
     @Override
     public void onPreviewFrame(byte[] data, int width, int height) {
-        Log.d(TAG, "onPreviewFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
-        mMediaRecorder.onPreviewFrame(IMAGE_FORMAT_I420, data, width, height);
-        mMediaRecorder.requestRender();
+//        //Log.d(TAG, "onPreviewFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
+        ffMediaRecorder.onPreviewFrame(IMAGE_FORMAT_I420, data, width, height);
+        ffMediaRecorder.requestRender();
     }
 
     @Override
     public void onCaptureFrame(byte[] data, int width, int height) {
-        Log.d(TAG, "onCaptureFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
+        //Log.d(TAG, "onCaptureFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
     }
 
     private String mOutUrl;
@@ -238,11 +237,12 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
         mSurfaceViewRoot = (RelativeLayout) findViewById(R.id.surface_root);
         RelativeLayout.LayoutParams p = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,
                 RelativeLayout.LayoutParams.MATCH_PARENT);
-        mSurfaceViewRoot.addView(mGLSurfaceView, p);
-        mMediaRecorder.init(mGLSurfaceView);
+        mSurfaceViewRoot.addView(glSurfaceView, p);
 
-        mCamera2Wrapper = new Camera2Wrapper(this);
-        mCamera2Wrapper.setDefaultPreviewSize(new Size(640, 480));
+        ffMediaRecorder.init(glSurfaceView);
+
+        camera2Wrapper = new Camera2Wrapper(this);
+        camera2Wrapper.setDefaultPreviewSize(new Size(640, 480));
 
         ViewTreeObserver treeObserver = mSurfaceViewRoot.getViewTreeObserver();
         treeObserver.addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
@@ -250,7 +250,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
             public boolean  onPreDraw() {
                 mSurfaceViewRoot.getViewTreeObserver().removeOnPreDrawListener(this);
                 mRootViewSize = new Size(mSurfaceViewRoot.getMeasuredWidth(), mSurfaceViewRoot.getMeasuredHeight());
-                updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+                updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
                 return true;
             }
         });
@@ -272,12 +272,12 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
             @Override
             public void recordStart() {
-                int frameWidth = mCamera2Wrapper.getPreviewSize().getWidth();
-                int frameHeight = mCamera2Wrapper.getPreviewSize().getHeight();
+                int frameWidth = camera2Wrapper.getPreviewSize().getWidth();
+                int frameHeight = camera2Wrapper.getPreviewSize().getHeight();
                 int fps = 25;
                 int bitRate = (int) (frameWidth * frameHeight * fps * 0.3);
                 mOutUrl = getOutFile(".mp4").getAbsolutePath();
-                mMediaRecorder.startRecord(RECORDER_TYPE_AV, mOutUrl, frameWidth, frameHeight, bitRate, fps);
+                ffMediaRecorder.startRecord(RECORDER_TYPE_AV, mOutUrl, frameWidth, frameHeight, bitRate, fps);
                 mAudioRecorder = new AudioRecorder(AVRecorderActivity.this);
                 mAudioRecorder.start();
 
@@ -290,7 +290,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        mMediaRecorder.stopRecord();
+                        ffMediaRecorder.stopRecord();
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -347,19 +347,19 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
             }
         });
 
-        mGestureDetector = new MyGestureListener(this, this);
+        gestureListener = new MyGestureListener(this, this);
     }
 
     private void showChangeSizeDialog() {
-        if (mCamera2Wrapper.getSupportPreviewSize() == null || mCamera2Wrapper.getSupportPreviewSize().size() == 0)
+        if (camera2Wrapper.getSupportPreviewSize() == null || camera2Wrapper.getSupportPreviewSize().size() == 0)
             return;
-        if (mCamera2Wrapper.getSupportPictureSize() == null || mCamera2Wrapper.getSupportPictureSize().size() == 0)
+        if (camera2Wrapper.getSupportPictureSize() == null || camera2Wrapper.getSupportPictureSize().size() == 0)
             return;
 
-        final ArrayList<String> previewSizeTitles = new ArrayList<>(mCamera2Wrapper.getSupportPreviewSize().size());
+        final ArrayList<String> previewSizeTitles = new ArrayList<>(camera2Wrapper.getSupportPreviewSize().size());
         int previewSizeSelectedIndex = 0;
-        String selectedSize = mCamera2Wrapper.getPreviewSize().getWidth() + "x" + mCamera2Wrapper.getPreviewSize().getHeight();
-        for (Size size : mCamera2Wrapper.getSupportPreviewSize()) {
+        String selectedSize = camera2Wrapper.getPreviewSize().getWidth() + "x" + camera2Wrapper.getPreviewSize().getHeight();
+        for (Size size : camera2Wrapper.getSupportPreviewSize()) {
             String title = size.getWidth() + "x" + size.getHeight();
             previewSizeTitles.add(title);
             if (selectedSize.equals(title)) {
@@ -367,10 +367,10 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
             }
         }
 
-        final ArrayList<String> captureSizeTitles = new ArrayList<>(mCamera2Wrapper.getSupportPreviewSize().size());
+        final ArrayList<String> captureSizeTitles = new ArrayList<>(camera2Wrapper.getSupportPreviewSize().size());
         int captureSizeSelectedIndex = 0;
-        selectedSize = mCamera2Wrapper.getPictureSize().getWidth() + "x" + mCamera2Wrapper.getPictureSize().getHeight();
-        for (Size size : mCamera2Wrapper.getSupportPictureSize()) {
+        selectedSize = camera2Wrapper.getPictureSize().getWidth() + "x" + camera2Wrapper.getPictureSize().getHeight();
+        for (Size size : camera2Wrapper.getSupportPictureSize()) {
             String title = size.getWidth() + "x" + size.getHeight();
             captureSizeTitles.add(title);
             if (selectedSize.equals(title)) {
@@ -407,9 +407,9 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
                 String[] strs = previewSizeTitles.get(position).split("x");
                 Size updateSize = new Size(Integer.valueOf(strs[0]), Integer.valueOf(strs[1]));
-                Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
-                mCamera2Wrapper.updatePreviewSize(updateSize);
-                updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+                //Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
+                camera2Wrapper.updatePreviewSize(updateSize);
+                updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
                 dialog.cancel();
             }
         });
@@ -426,9 +426,9 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
                 String[] strs = captureSizeTitles.get(position).split("x");
                 Size updateSize = new Size(Integer.valueOf(strs[0]), Integer.valueOf(strs[1]));
-                Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
-                mCamera2Wrapper.updatePictureSize(updateSize);
-                updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+                //Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
+                camera2Wrapper.updatePictureSize(updateSize);
+                updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
                 dialog.cancel();
             }
         });
@@ -446,7 +446,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
             @SuppressLint("ResourceAsColor")
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
-                Log.d(TAG, "onCheckedChanged() called with: group = [" + group + "], checkedId = [" + checkedId + "]");
+                //Log.d(TAG, "onCheckedChanged() called with: group = [" + group + "], checkedId = [" + checkedId + "]");
                 if (checkedId == R.id.capture_size_btn) {
                     ((RadioButton) rootView.findViewById(R.id.capture_size_btn)).setTextColor(getColor(R.color.colorAccent));
                     ((RadioButton) rootView.findViewById(R.id.preview_size_btn)).setTextColor(getColor(R.color.colorText));
@@ -471,14 +471,14 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.switch_camera_btn:
-                String cameraId = mCamera2Wrapper.getCameraId();
-                String[] cameraIds = mCamera2Wrapper.getSupportCameraIds();
+                String cameraId = camera2Wrapper.getCameraId();
+                String[] cameraIds = camera2Wrapper.getSupportCameraIds();
                 if (cameraIds != null) {
                     for (int i = 0; i < cameraIds.length; i++) {
                         if (!cameraIds[i].equals(cameraId)) {
-                            mCamera2Wrapper.updateCameraId(cameraIds[i]);
+                            camera2Wrapper.updateCameraId(cameraIds[i]);
                             updateTransformMatrix(cameraIds[i]);
-                            updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
+                            updateGLSurfaceViewSize(camera2Wrapper.getPreviewSize());
                             break;
                         }
                     }
@@ -503,9 +503,9 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
     public void updateTransformMatrix(String cameraId) {
         if (Integer.valueOf(cameraId) == CameraCharacteristics.LENS_FACING_FRONT) {
-            mMediaRecorder.setTransformMatrix(90, 0);
+            ffMediaRecorder.setTransformMatrix(90, 0);
         } else {
-            mMediaRecorder.setTransformMatrix(90, 1);
+            ffMediaRecorder.setTransformMatrix(90, 1);
         }
 
     }
@@ -513,13 +513,13 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
     public void updateGLSurfaceViewSize(Size previewSize) {
         Size fitSize = null;
         fitSize = CameraUtil.getFitInScreenSize(previewSize.getWidth(), previewSize.getHeight(), getScreenSize().getWidth(), getScreenSize().getHeight());
-        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mGLSurfaceView
+        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) glSurfaceView
                 .getLayoutParams();
         params.width = fitSize.getWidth();
         params.height = fitSize.getHeight();
         params.addRule(RelativeLayout.ALIGN_PARENT_TOP | RelativeLayout.CENTER_HORIZONTAL);
 
-        mGLSurfaceView.setLayoutParams(params);
+        glSurfaceView.setLayoutParams(params);
     }
 
     public Size getScreenSize() {
@@ -533,10 +533,10 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
     public static final File getOutFile(final String ext) {
         final File dir = new File(Environment.getExternalStorageDirectory(), RESULT_IMG_DIR);
-        Log.d(TAG, "path=" + dir.toString());
+        //Log.d(TAG, "path=" + dir.toString());
         dir.mkdirs();
         if (dir.canWrite()) {
-            return new File(dir, "av_" + getDateTimeString() + ext);
+            return new File(dir, "av_record" + ext);
         }
         return null;
     }
@@ -548,7 +548,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
     @Override
     public void onAudioData(byte[] data, int dataSize) {
-        mMediaRecorder.onAudioData(data, dataSize);
+        ffMediaRecorder.onAudioData(data, dataSize);
     }
 
     @Override
@@ -563,7 +563,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        mGestureDetector.onTouchEvent(event);
+        gestureListener.onTouchEvent(event);
         return super.onTouchEvent(event);
     }
 
@@ -597,7 +597,7 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
                 ByteBuffer buf = ByteBuffer.allocate(bytes);
                 bitmap.copyPixelsToBuffer(buf);
                 byte[] byteArray = buf.array();
-                mMediaRecorder.setFilterData(index, IMAGE_FORMAT_RGBA, bitmap.getWidth(), bitmap.getHeight(), byteArray);
+                ffMediaRecorder.setFilterData(index, IMAGE_FORMAT_RGBA, bitmap.getWidth(), bitmap.getHeight(), byteArray);
             }
         } finally {
             try {
@@ -633,10 +633,11 @@ public class AVRecorderActivity extends AppCompatActivity implements Camera2Fram
             default:
         }
 
+        Log.e(TAG, "loadRenderResource: mShaderIndex "+mShaderIndex );
         if(mShaderIndex >= SHADER_INDEX_LUT_A && mShaderIndex <= SHADER_INDEX_LUT_C) {
-            mMediaRecorder.loadShaderFromAssetsFile(SHADER_INDEX_LUT_A, getResources());
+            ffMediaRecorder.loadShaderFromAssetsFile(SHADER_INDEX_LUT_A, getResources());
         } else {
-            mMediaRecorder.loadShaderFromAssetsFile(mShaderIndex, getResources());
+            ffMediaRecorder.loadShaderFromAssetsFile(mShaderIndex, getResources());
         }
     }
 

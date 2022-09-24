@@ -32,13 +32,11 @@
 
 #pragma once
 
-namespace glm
-{
-	enum precision
-	{
-		highp,
-		mediump,
-		lowp,
-		defaultp = highp
-	};
+namespace glm {
+    enum precision {
+        highp,
+        mediump,
+        lowp,
+        defaultp = highp
+    };
 }//namespace glm

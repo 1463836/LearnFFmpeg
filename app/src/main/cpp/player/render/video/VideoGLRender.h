@@ -8,6 +8,7 @@
 
 #ifndef LEARNFFMPEG_MASTER_GLRENDER_H
 #define LEARNFFMPEG_MASTER_GLRENDER_H
+
 #include <thread>
 #include <ImageDef.h>
 #include "VideoRender.h"
@@ -22,42 +23,50 @@ using namespace glm;
 #define MATH_PI 3.1415926535897932384626433832802
 #define TEXTURE_NUM 3
 
-class VideoGLRender: public VideoRender, public BaseGLRender{
+class VideoGLRender : public VideoRender, public BaseGLRender {
 public:
-    virtual void Init(int videoWidth, int videoHeight, int *dstSize);
-    virtual void RenderVideoFrame(NativeImage *pImage);
-    virtual void UnInit();
+    virtual void init(int videoWidth, int videoHeight, int *dstSize);
 
-    virtual void OnSurfaceCreated();
-    virtual void OnSurfaceChanged(int w, int h);
-    virtual void OnDrawFrame();
+    virtual void renderVideoFrame(NativeImage *pImage);
 
-    static VideoGLRender *GetInstance();
-    static void ReleaseInstance();
+    virtual void unInit();
 
-    virtual void UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY);
-    virtual void UpdateMVPMatrix(TransformMatrix * pTransformMatrix);
-    virtual void SetTouchLoc(float touchX, float touchY) {
-        m_TouchXY.x = touchX / m_ScreenSize.x;
-        m_TouchXY.y = touchY / m_ScreenSize.y;
+    virtual void onSurfaceCreated();
+
+    virtual void onSurfaceChanged(int w, int h);
+
+    virtual void onDrawFrame();
+
+    static VideoGLRender *getInstance();
+
+    static void releaseInstance();
+
+    virtual void updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY);
+
+    virtual void updateMVPMatrix(TransformMatrix *pTransformMatrix);
+
+    virtual void setTouchLoc(float touchX, float touchY) {
+        m_TouchXY.x = touchX / screenSize.x;
+        m_TouchXY.y = touchY / screenSize.y;
     }
 
 private:
     VideoGLRender();
+
     virtual ~VideoGLRender();
 
     static std::mutex m_Mutex;
-    static VideoGLRender* s_Instance;
-    GLuint m_ProgramObj = GL_NONE;
-    GLuint m_TextureIds[TEXTURE_NUM];
-    GLuint m_VaoId;
-    GLuint m_VboIds[3];
-    NativeImage m_RenderImage;
-    glm::mat4 m_MVPMatrix;
+    static VideoGLRender *instance;
+    GLuint programObj = GL_NONE;
+    GLuint textureIds[TEXTURE_NUM];
+    GLuint vaoId;
+    GLuint vboIds[3];
+    NativeImage renderImage;
+    glm::mat4 MVPMatrix;
 
-    int m_FrameIndex;
+    int frameIndex;
     vec2 m_TouchXY;
-    vec2 m_ScreenSize;
+    vec2 screenSize;
 };
 
 

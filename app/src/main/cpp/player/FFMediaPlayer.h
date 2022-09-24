@@ -14,30 +14,38 @@
 
 class FFMediaPlayer : public MediaPlayer {
 public:
-    FFMediaPlayer(){};
-    virtual ~FFMediaPlayer(){};
+    FFMediaPlayer() {};
 
-    virtual void Init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface);
-    virtual void UnInit();
+    virtual ~FFMediaPlayer() {};
 
-    virtual void Play();
-    virtual void Pause();
-    virtual void Stop();
-    virtual void SeekToPosition(float position);
-    virtual long GetMediaParams(int paramType);
+    virtual void init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface);
+
+    virtual void unInit();
+
+    virtual void play();
+
+    virtual void pause();
+
+    virtual void stop();
+
+    virtual void seekToPosition(float position);
+
+    virtual long getMediaParams(int paramType);
 
 private:
-    virtual JNIEnv *GetJNIEnv(bool *isAttach);
-    virtual jobject GetJavaObj();
-    virtual JavaVM *GetJavaVM();
+    virtual JNIEnv *getJNIEnv(bool *isAttach);
+
+    virtual jobject getJavaObj();
+
+    virtual JavaVM *getJavaVM();
 
     static void PostMessage(void *context, int msgType, float msgCode);
 
-    VideoDecoder *m_VideoDecoder = nullptr;
-    AudioDecoder *m_AudioDecoder = nullptr;
+    VideoDecoder *videoDecoder = nullptr;
+    AudioDecoder *audioDecoder = nullptr;
 
-    VideoRender *m_VideoRender = nullptr;
-    AudioRender *m_AudioRender = nullptr;
+    VideoRender *videoRender = nullptr;
+    AudioRender *audioRender = nullptr;
 };
 
 

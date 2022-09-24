@@ -8,7 +8,7 @@
 
 #include "HWCodecPlayer.h"
 
-void av_log_callback(void*ptr, int level, const char* fmt, va_list vl) {
+void av_log_callback(void *ptr, int level, const char *fmt, va_list vl) {
     va_list vl2;
     char line[1024] = {0};
     static int print_prefix = 1;
@@ -18,11 +18,12 @@ void av_log_callback(void*ptr, int level, const char* fmt, va_list vl) {
     LOGCATI("FFMPEG: %s", line);
 }
 
-void HWCodecPlayer::Init(JNIEnv *jniEnv, jobject obj, char *url, int videoRenderType, jobject surface) {
-    LOGCATE("HWCodecPlayer::Init");
+void
+HWCodecPlayer::init(JNIEnv *jniEnv, jobject obj, char *url, int videoRenderType, jobject surface) {
+//    LOGCATE("HWCodecPlayer::Init");
     av_log_set_level(AV_LOG_DEBUG);
     av_log_set_callback(av_log_callback);
-    strcpy(m_Url,url);
+    strcpy(m_Url, url);
     m_ANativeWindow = ANativeWindow_fromSurface(jniEnv, surface);
 
     m_VideoPacketQueue = new AVPacketQueue();
@@ -31,47 +32,47 @@ void HWCodecPlayer::Init(JNIEnv *jniEnv, jobject obj, char *url, int videoRender
     m_VideoPacketQueue->Start();
     m_AudioPacketQueue->Start();
 
-    jniEnv->GetJavaVM(&m_JavaVM);
-    m_JavaObj = jniEnv->NewGlobalRef(obj);
+    jniEnv->GetJavaVM(&javaVM);
+    javaObj = jniEnv->NewGlobalRef(obj);
 
 }
 
-void HWCodecPlayer::UnInit() {
-    LOGCATE("HWCodecPlayer::UnInit");
-    Stop();
-    if(m_DeMuxThread) {
+void HWCodecPlayer::unInit() {
+//    LOGCATE("HWCodecPlayer::UnInit");
+    stop();
+    if (m_DeMuxThread) {
         m_DeMuxThread->join();
         delete m_DeMuxThread;
         m_DeMuxThread = nullptr;
     }
 
-    if(m_VideoPacketQueue) {
+    if (m_VideoPacketQueue) {
         delete m_VideoPacketQueue;
         m_VideoPacketQueue = nullptr;
     }
 
-    if(m_AudioPacketQueue) {
+    if (m_AudioPacketQueue) {
         delete m_AudioPacketQueue;
         m_AudioPacketQueue = nullptr;
     }
 
-    if(m_ANativeWindow) {
+    if (m_ANativeWindow) {
         ANativeWindow_release(m_ANativeWindow);
     }
 
     bool isAttach = false;
-    JNIEnv *env = GetJNIEnv(&isAttach);
-    env->DeleteGlobalRef(m_JavaObj);
-    if(m_AssetMgr)
+    JNIEnv *env = getJNIEnv(&isAttach);
+    env->DeleteGlobalRef(javaObj);
+    if (m_AssetMgr)
         env->DeleteGlobalRef(m_AssetMgr);
-    if(isAttach)
-        GetJavaVM()->DetachCurrentThread();
+    if (isAttach)
+        getJavaVM()->DetachCurrentThread();
 
 }
 
-void HWCodecPlayer::Play() {
-    LOGCATE("HWCodecPlayer::Play");
-    if(m_DeMuxThread == nullptr) {
+void HWCodecPlayer::play() {
+//    LOGCATE("HWCodecPlayer::Play");
+    if (m_DeMuxThread == nullptr) {
         m_DeMuxThread = new thread(DeMuxThreadProc, this);
     } else {
         std::unique_lock<std::mutex> lock(m_Mutex);
@@ -80,32 +81,31 @@ void HWCodecPlayer::Play() {
     }
 }
 
-void HWCodecPlayer::Pause() {
-    LOGCATE("HWCodecPlayer::Pause");
+void HWCodecPlayer::pause() {
+//    LOGCATE("HWCodecPlayer::Pause");
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_PlayerState = PLAYER_STATE_PAUSE;
 }
 
-void HWCodecPlayer::Stop() {
-    LOGCATE("HWCodecPlayer::Stop");
+void HWCodecPlayer::stop() {
+//    LOGCATE("HWCodecPlayer::Stop");
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_PlayerState = PLAYER_STATE_STOP;
     m_Cond.notify_all();
 }
 
-void HWCodecPlayer::SeekToPosition(float position) {
-    LOGCATE("HWCodecPlayer::SeekToPosition position=%f", position);
+void HWCodecPlayer::seekToPosition(float position) {
+//    LOGCATE("HWCodecPlayer::SeekToPosition position=%f", position);
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_SeekPosition = position;
     m_PlayerState = PLAYER_STATE_PLAYING;
     m_Cond.notify_all();
 }
 
-long HWCodecPlayer::GetMediaParams(int paramType) {
-    LOGCATE("HWCodecPlayer::GetMediaParams paramType=%d", paramType);
+long HWCodecPlayer::getMediaParams(int paramType) {
+//    LOGCATE("HWCodecPlayer::GetMediaParams paramType=%d", paramType);
     long value = 0;
-    switch(paramType)
-    {
+    switch (paramType) {
         case MEDIA_PARAM_VIDEO_WIDTH:
             value = m_VideoCodecCtx != nullptr ? m_VideoCodecCtx->width : 0;
             break;
@@ -119,17 +119,17 @@ long HWCodecPlayer::GetMediaParams(int paramType) {
     return value;
 }
 
-JNIEnv *HWCodecPlayer::GetJNIEnv(bool *isAttach) {
+JNIEnv *HWCodecPlayer::getJNIEnv(bool *isAttach) {
     JNIEnv *env;
     int status;
-    if (nullptr == m_JavaVM) {
-        LOGCATE("HWCodecPlayer::GetJNIEnv m_JavaVM == nullptr");
+    if (nullptr == javaVM) {
+//        LOGCATE("HWCodecPlayer::GetJNIEnv m_JavaVM == nullptr");
         return nullptr;
     }
     *isAttach = false;
-    status = m_JavaVM->GetEnv((void **)&env, JNI_VERSION_1_4);
+    status = javaVM->GetEnv((void **) &env, JNI_VERSION_1_4);
     if (status != JNI_OK) {
-        status = m_JavaVM->AttachCurrentThread(&env, nullptr);
+        status = javaVM->AttachCurrentThread(&env, nullptr);
         if (status != JNI_OK) {
             LOGCATE("HWCodecPlayer::GetJNIEnv failed to attach current thread");
             return nullptr;
@@ -139,45 +139,45 @@ JNIEnv *HWCodecPlayer::GetJNIEnv(bool *isAttach) {
     return env;
 }
 
-jobject HWCodecPlayer::GetJavaObj() {
-    return m_JavaObj;
+jobject HWCodecPlayer::getJavaObj() {
+    return javaObj;
 }
 
-JavaVM *HWCodecPlayer::GetJavaVM() {
-    return m_JavaVM;
+JavaVM *HWCodecPlayer::getJavaVM() {
+    return javaVM;
 }
 
 void HWCodecPlayer::PostMessage(void *context, int msgType, float msgCode) {
-    if(context != nullptr)
-    {
+    if (context != nullptr) {
         HWCodecPlayer *player = static_cast<HWCodecPlayer *>(context);
         bool isAttach = false;
-        JNIEnv *env = player->GetJNIEnv(&isAttach);
-        LOGCATE("HWCodecPlayer::PostMessage env=%p", env);
-        if(env == nullptr)
+        JNIEnv *env = player->getJNIEnv(&isAttach);
+//        LOGCATE("HWCodecPlayer::PostMessage env=%p", env);
+        if (env == nullptr)
             return;
-        jobject javaObj = player->GetJavaObj();
-        jmethodID mid = env->GetMethodID(env->GetObjectClass(javaObj), JAVA_PLAYER_EVENT_CALLBACK_API_NAME, "(IF)V");
+        jobject javaObj = player->getJavaObj();
+        jmethodID mid = env->GetMethodID(env->GetObjectClass(javaObj),
+                                         JAVA_PLAYER_EVENT_CALLBACK_API_NAME, "(IF)V");
         env->CallVoidMethod(javaObj, mid, msgType, msgCode);
-        if(isAttach)
-            player->GetJavaVM()->DetachCurrentThread();
+        if (isAttach)
+            player->getJavaVM()->DetachCurrentThread();
 
     }
 }
 
 void HWCodecPlayer::DeMuxThreadProc(HWCodecPlayer *player) {
-    LOGCATE("HWCodecPlayer::DeMuxThreadProc start");
+//    LOGCATE("HWCodecPlayer::DeMuxThreadProc start");
     do {
-        if(player->InitDecoder() != 0) break;
+        if (player->InitDecoder() != 0) break;
         player->DoMuxLoop();
     } while (false);
     player->UnInitDecoder();
     player->PostMessage(player, MSG_DECODER_DONE, 0);
-    LOGCATE("HWCodecPlayer::DeMuxThreadProc end");
+//    LOGCATE("HWCodecPlayer::DeMuxThreadProc end");
 }
 
 int HWCodecPlayer::DoMuxLoop() {
-    LOGCATE("HWCodecPlayer::DoMuxLoop start");
+//    LOGCATE("HWCodecPlayer::DoMuxLoop start");
     {
         std::unique_lock<std::mutex> lock(m_Mutex);
         m_PlayerState = PLAYER_STATE_PLAYING;
@@ -185,68 +185,70 @@ int HWCodecPlayer::DoMuxLoop() {
     }
     int result = 0;
     AVPacket avPacket = {0};
-    for(;;) {
+    for (;;) {
         double passTimes = 0;
         while (m_PlayerState == PLAYER_STATE_PAUSE) {
             double lastSysTime = GetSysCurrentTime();
             std::unique_lock<std::mutex> lock(m_Mutex);
-            LOGCATE("HWCodecPlayer::DoMuxLoop waiting .......");
+//            LOGCATE("HWCodecPlayer::DoMuxLoop waiting .......");
             m_Cond.wait_for(lock, std::chrono::milliseconds(10));
             passTimes = GetSysCurrentTime() - lastSysTime;
             m_CommonStartBase += passTimes;
         }
 
-        if(m_PlayerState == PLAYER_STATE_STOP) {
+        if (m_PlayerState == PLAYER_STATE_STOP) {
             break;
         }
 
-        if(m_SeekPosition >= 0) {
+        if (m_SeekPosition >= 0) {
             //seek to frame
-            LOGCATE("HWCodecPlayer::DoMuxLoop seeking m_SeekPosition=%f", m_SeekPosition);
+//            LOGCATE("HWCodecPlayer::DoMuxLoop seeking m_SeekPosition=%f", m_SeekPosition);
             int64_t seek_target = static_cast<int64_t>(m_SeekPosition * 1000000);//微秒
             int64_t seek_min = INT64_MIN;
             int64_t seek_max = INT64_MAX;
-            int seek_ret = avformat_seek_file(m_AVFormatContext, -1, seek_min, seek_target, seek_max, 0);
-            LOGCATE("HWCodecPlayer::DoMuxLoop seeking 11 m_SeekPosition=%f", m_SeekPosition);
+            int seek_ret = avformat_seek_file(m_AVFormatContext, -1, seek_min, seek_target,
+                                              seek_max, 0);
+//            LOGCATE("HWCodecPlayer::DoMuxLoop seeking 11 m_SeekPosition=%f", m_SeekPosition);
             if (seek_ret < 0) {
                 m_SeekSuccess = false;
-                LOGCATE("HWCodecPlayer::DoMuxLoop error while seeking");
+//                LOGCATE("HWCodecPlayer::DoMuxLoop error while seeking");
             } else {
                 std::unique_lock<std::mutex> vBufLock(m_VideoBufMutex);
-                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 22 m_SeekPosition=%f", m_SeekPosition);
+//                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 22 m_SeekPosition=%f", m_SeekPosition);
                 avcodec_flush_buffers(m_VideoCodecCtx);
                 AMediaCodec_flush(m_MediaCodec);
                 m_VideoStartBase = 0;
                 m_VideoPacketQueue->Flush();
                 vBufLock.unlock();
-                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 222 m_SeekPosition=%f", m_SeekPosition);
+//                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 222 m_SeekPosition=%f", m_SeekPosition);
                 unique_lock<mutex> aBufLock(m_AudioBufMutex);
-                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 33 m_SeekPosition=%f", m_SeekPosition);
+//                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 33 m_SeekPosition=%f", m_SeekPosition);
                 avcodec_flush_buffers(m_AudioCodecCtx);
                 m_AudioStartBase = 0;
                 m_AudioPacketQueue->Flush();
                 aBufLock.unlock();
-                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 333 m_SeekPosition=%f", m_SeekPosition);
+//                LOGCATE("HWCodecPlayer::DoMuxLoop seeking 333 m_SeekPosition=%f", m_SeekPosition);
                 m_SeekPosition = -1;
                 //ClearCache();
                 m_SeekSuccess = true;
-                LOGCATE("HWCodecPlayer::DoMuxLoop seekFrame pos=%f", m_SeekPosition);
+//                LOGCATE("HWCodecPlayer::DoMuxLoop seekFrame pos=%f", m_SeekPosition);
             }
         }
 
         result = av_read_frame(m_AVFormatContext, &avPacket);
-        if(result >= 0) {
+        if (result >= 0) {
             double bufferDuration = m_VideoPacketQueue->GetDuration() * av_q2d(m_VideoTimeBase);
-            LOGCATE("HWCodecPlayer::DoMuxLoop bufferDuration=%lfs", bufferDuration);
+//            LOGCATE("HWCodecPlayer::DoMuxLoop bufferDuration=%lfs", bufferDuration);
             //防止缓冲数据包过多
-            while (BUFF_MAX_VIDEO_DURATION < bufferDuration && m_PlayerState == PLAYER_STATE_PLAYING && m_SeekPosition < 0) {
+            while (BUFF_MAX_VIDEO_DURATION < bufferDuration &&
+                   m_PlayerState == PLAYER_STATE_PLAYING && m_SeekPosition < 0) {
                 bufferDuration = m_VideoPacketQueue->GetDuration() * av_q2d(m_VideoTimeBase);
                 usleep(10 * 1000);
             }
 
-            if(avPacket.stream_index == m_VideoStreamIdx) {
+            if (avPacket.stream_index == m_VideoStreamIdx) {
                 m_VideoPacketQueue->PushPacket(&avPacket);
-            } else if(avPacket.stream_index == m_AudioStreamIdx) {
+            } else if (avPacket.stream_index == m_AudioStreamIdx) {
                 m_AudioPacketQueue->PushPacket(&avPacket);
             } else {
                 av_packet_unref(&avPacket);
@@ -257,65 +259,68 @@ int HWCodecPlayer::DoMuxLoop() {
             m_PlayerState = PLAYER_STATE_PAUSE;
         }
     }
-    LOGCATE("HWCodecPlayer::DoMuxLoop end");
+//    LOGCATE("HWCodecPlayer::DoMuxLoop end");
     return 0;
 }
 
 #define AUDIO_DST_SAMPLE_RATE 44100
-void HWCodecPlayer::AudioDecodeThreadProc(HWCodecPlayer *player) {
-    LOGCATE("HWCodecPlayer::AudioDecodeThreadProc start");
 
-    AVPacketQueue* audioPacketQueue = player->m_AudioPacketQueue;
-    AVCodecContext* audioCodecCtx = player->m_AudioCodecCtx;
+void HWCodecPlayer::AudioDecodeThreadProc(HWCodecPlayer *player) {
+//    LOGCATE("HWCodecPlayer::AudioDecodeThreadProc start");
+
+    AVPacketQueue *audioPacketQueue = player->m_AudioPacketQueue;
+    AVCodecContext *audioCodecCtx = player->m_AudioCodecCtx;
     AVPacket *audioPacket = av_packet_alloc();
     AVFrame *audioFrame = av_frame_alloc();
 
-    uint8_t *audioOutBuffer = (uint8_t *)malloc(AUDIO_DST_SAMPLE_RATE * 2);
+    uint8_t *audioOutBuffer = (uint8_t *) malloc(AUDIO_DST_SAMPLE_RATE * 2);
     int outChannelNb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
 
     bool isAttach = false;
-    JNIEnv *env = player->GetJNIEnv(&isAttach);
-    JavaVM *javaVm = player->m_JavaVM;
+    JNIEnv *env = player->getJNIEnv(&isAttach);
+    JavaVM *javaVm = player->javaVM;
 
-    jclass activityClass = env->GetObjectClass(player->m_JavaObj);
+    jclass activityClass = env->GetObjectClass(player->javaObj);
     jmethodID createTrackMid = env->GetMethodID(activityClass, "createTrack", "(II)V");
     jmethodID playTrackMid = env->GetMethodID(activityClass, "playTrack", "([BI)V");
-    env->CallVoidMethod(player->m_JavaObj, createTrackMid, AUDIO_DST_SAMPLE_RATE, outChannelNb);
+    env->CallVoidMethod(player->javaObj, createTrackMid, AUDIO_DST_SAMPLE_RATE, outChannelNb);
 
-    for(;;) {
+    for (;;) {
         while (player->m_PlayerState == PLAYER_STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(player->m_Mutex);
-            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc waiting .......");
+//            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc waiting .......");
             player->m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
 
-        if(player->m_PlayerState == PLAYER_STATE_STOP) {
+        if (player->m_PlayerState == PLAYER_STATE_STOP) {
             break;
         }
 
         bool isLocked = true;
         std::unique_lock<std::mutex> lock(player->m_AudioBufMutex);
-        if(audioPacketQueue->GetPacketSize() == 0) {
+        if (audioPacketQueue->GetPacketSize() == 0) {
             isLocked = false;
             lock.unlock();
         }
-        if(audioPacketQueue->GetPacket(audioPacket) < 0)
+        if (audioPacketQueue->GetPacket(audioPacket) < 0)
             break;
 
         int ret = avcodec_send_packet(audioCodecCtx, audioPacket);
         if (ret < 0) {
-            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc Error submitting a av_packet for audio decoding (%s)", av_err2str(ret));
+//            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc Error submitting a av_packet for audio decoding (%s)",
+//                    av_err2str(ret));
             return;
         }
 
         while (ret >= 0) {
             ret = avcodec_receive_frame(audioCodecCtx, audioFrame);
             if (ret < 0) {
-                LOGCATE("HWCodecPlayer::AudioDecodeThreadProc Error during decoding (%s)", av_err2str(ret));
+//                LOGCATE("HWCodecPlayer::AudioDecodeThreadProc Error during decoding (%s)",
+//                        av_err2str(ret));
                 break;
             }
 
-            SyncClock* audioClock = &player->m_AudioClock;
+            SyncClock *audioClock = &player->m_AudioClock;
             double presentationNano = audioFrame->pts * av_q2d(player->m_AudioTimeBase) * 1000;
             audioClock->SetClock(presentationNano, GetSysCurrentTime());
 //            player->AVSync();
@@ -331,87 +336,96 @@ void HWCodecPlayer::AudioDecodeThreadProc(HWCodecPlayer *player) {
 //                usleep(sleepMs * 1000);
 //            }
 
-            if(player->m_SeekPosition < 0)
+            if (player->m_SeekPosition < 0)
                 PostMessage(player, MSG_DECODING_TIME, presentationNano * 1.0f / 1000);
-            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc sync audio curPts = %lf", presentationNano);
+//            LOGCATE("HWCodecPlayer::AudioDecodeThreadProc sync audio curPts = %lf",
+//                    presentationNano);
 
-            swr_convert(player->m_SwrCtx, &audioOutBuffer, AUDIO_DST_SAMPLE_RATE * 2, (const uint8_t **)audioFrame->data, audioFrame->nb_samples);
-            int buffer_size = av_samples_get_buffer_size(NULL, outChannelNb, audioFrame->nb_samples, AV_SAMPLE_FMT_S16, 1);
+            swr_convert(player->m_SwrCtx, &audioOutBuffer, AUDIO_DST_SAMPLE_RATE * 2,
+                        (const uint8_t **) audioFrame->data, audioFrame->nb_samples);
+            int buffer_size = av_samples_get_buffer_size(NULL, outChannelNb, audioFrame->nb_samples,
+                                                         AV_SAMPLE_FMT_S16, 1);
             jbyteArray audio_sample_array = env->NewByteArray(buffer_size);
-            env->SetByteArrayRegion(audio_sample_array, 0, buffer_size, (const jbyte *)audioOutBuffer);
-            env->CallVoidMethod(player->m_JavaObj, playTrackMid, audio_sample_array, buffer_size);
+            env->SetByteArrayRegion(audio_sample_array, 0, buffer_size,
+                                    (const jbyte *) audioOutBuffer);
+            env->CallVoidMethod(player->javaObj, playTrackMid, audio_sample_array, buffer_size);
             env->DeleteLocalRef(audio_sample_array);
             av_frame_unref(audioFrame);
             av_packet_unref(audioPacket);
         }
-        if(isLocked) lock.unlock();
+        if (isLocked) lock.unlock();
     }
 
-    if(audioPacket != nullptr) {
+    if (audioPacket != nullptr) {
         av_packet_free(&audioPacket);
         audioPacket = nullptr;
     }
 
-    if(audioFrame != nullptr) {
+    if (audioFrame != nullptr) {
         av_frame_free(&audioFrame);
         audioFrame = nullptr;
     }
 
-    if(audioOutBuffer) {
+    if (audioOutBuffer) {
         free(audioOutBuffer);
     }
 
-    if(isAttach)
+    if (isAttach)
         javaVm->DetachCurrentThread();
 
-    LOGCATE("HWCodecPlayer::AudioDecodeThreadProc end");
+//    LOGCATE("HWCodecPlayer::AudioDecodeThreadProc end");
 }
 
 void HWCodecPlayer::VideoDecodeThreadProc(HWCodecPlayer *player) {
-    LOGCATE("HWCodecPlayer::VideoDecodeThreadProc start");
-    AVPacketQueue* videoPacketQueue = player->m_VideoPacketQueue;
-    AMediaCodec* videoCodec = player->m_MediaCodec;
+//    LOGCATE("HWCodecPlayer::VideoDecodeThreadProc start");
+    AVPacketQueue *videoPacketQueue = player->m_VideoPacketQueue;
+    AMediaCodec *videoCodec = player->m_MediaCodec;
     AVPacket *packet = av_packet_alloc();
-    for(;;) {
+    for (;;) {
         while (player->m_PlayerState == PLAYER_STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(player->m_Mutex);
-            LOGCATE("HWCodecPlayer::VideoDecodeThreadProc waiting .......");
+//            LOGCATE("HWCodecPlayer::VideoDecodeThreadProc waiting .......");
             player->m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
 
-        if(player->m_PlayerState == PLAYER_STATE_STOP) {
+        if (player->m_PlayerState == PLAYER_STATE_STOP) {
             break;
         }
 
         bool isLocked = true;
         std::unique_lock<std::mutex> lock(player->m_VideoBufMutex);
-        if(videoPacketQueue->GetPacketSize() == 0) {
+        if (videoPacketQueue->GetPacketSize() == 0) {
             isLocked = false;
             lock.unlock();
         }
-        if(videoPacketQueue->GetPacket(packet) < 0) {
+        if (videoPacketQueue->GetPacket(packet) < 0) {
             break;
         }
-        LOGCATI("HWCodecPlayer::VideoDecodeThreadProc packetSize=%d, buffTime=%lfs",videoPacketQueue->GetPacketSize(), videoPacketQueue->GetDuration()* av_q2d(player->m_VideoTimeBase));
+//        LOGCATI("HWCodecPlayer::VideoDecodeThreadProc packetSize=%d, buffTime=%lfs",
+//                videoPacketQueue->GetPacketSize(),
+//                videoPacketQueue->GetDuration() * av_q2d(player->m_VideoTimeBase));
         ssize_t bufIdx = -1;
         bufIdx = AMediaCodec_dequeueInputBuffer(videoCodec, 0);
         if (bufIdx >= 0) {
             size_t bufSize;
             auto buf = AMediaCodec_getInputBuffer(videoCodec, bufIdx, &bufSize);
-            av_bitstream_filter_filter(player->m_Bsfc, player->m_VideoCodecCtx, NULL, &packet->data, &packet->size, packet->data, packet->size,
+            av_bitstream_filter_filter(player->m_Bsfc, player->m_VideoCodecCtx, NULL, &packet->data,
+                                       &packet->size, packet->data, packet->size,
                                        packet->flags & AV_PKT_FLAG_KEY);
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc 0x%02X 0x%02X 0x%02X 0x%02X \n",packet->data[0],packet->data[1],packet->data[2],packet->data[3]);
+            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc 0x%02X 0x%02X 0x%02X 0x%02X \n",
+                    packet->data[0], packet->data[1], packet->data[2], packet->data[3]);
             memcpy(buf, packet->data, packet->size);
             AMediaCodec_queueInputBuffer(videoCodec, bufIdx, 0, packet->size, packet->pts, 0);
         }
         av_packet_unref(packet);
         AMediaCodecBufferInfo info;
         auto status = AMediaCodec_dequeueOutputBuffer(videoCodec, &info, 1000);
-        LOGCATI("HWCodecPlayer::VideoDecodeThreadProc status: %d\n", status);
-        uint8_t* buffer;
+//        LOGCATI("HWCodecPlayer::VideoDecodeThreadProc status: %d\n", status);
+        uint8_t *buffer;
         if (status >= 0) {
-            SyncClock* videoClock = &player->m_VideoClock;
-            double presentationNano = info.presentationTimeUs * av_q2d(player->m_VideoTimeBase) * 1000;
+            SyncClock *videoClock = &player->m_VideoClock;
+            double presentationNano =
+                    info.presentationTimeUs * av_q2d(player->m_VideoTimeBase) * 1000;
             videoClock->SetClock(presentationNano, GetSysCurrentTime());
             player->AVSync();
 //            if(player->m_VideoStartBase <= 0)
@@ -427,39 +441,40 @@ void HWCodecPlayer::VideoDecodeThreadProc(HWCodecPlayer *player) {
 //            }
 
             size_t size;
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc sync video curPts = %lf", presentationNano);
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc sync video curPts = %lf",
+//                    presentationNano);
             buffer = AMediaCodec_getOutputBuffer(videoCodec, status, &size);
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc buffer: %p, buffer size: %d", buffer, size);
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc buffer: %p, buffer size: %d", buffer,
+//                    size);
             AMediaCodec_releaseOutputBuffer(videoCodec, status, info.size != 0);
         } else if (status == AMEDIACODEC_INFO_OUTPUT_BUFFERS_CHANGED) {
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc output buffers changed");
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc output buffers changed");
         } else if (status == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc output format changed");
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc output format changed");
         } else if (status == AMEDIACODEC_INFO_TRY_AGAIN_LATER) {
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc no output buffer right now");
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc no output buffer right now");
         } else {
-            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc unexpected info code: %zd", status);
+//            LOGCATI("HWCodecPlayer::VideoDecodeThreadProc unexpected info code: %zd", status);
         }
-        if(isLocked) lock.unlock();
+        if (isLocked) lock.unlock();
     }
 
-    if(packet != nullptr) {
+    if (packet != nullptr) {
         av_packet_free(&packet);
         packet = nullptr;
     }
-    LOGCATE("HWCodecPlayer::VideoDecodeThreadProc end");
+//    LOGCATE("HWCodecPlayer::VideoDecodeThreadProc end");
 }
 
-void HWCodecPlayer::SetMediaParams(int paramType, jobject obj) {
+void HWCodecPlayer::setMediaParams(int paramType, jobject obj) {
     //MediaPlayer::SetMediaParams(paramType, obj);
-    LOGCATE("HWCodecPlayer::SetMediaParams [paramType, obj] = [%d, %p]", paramType, obj);
+//    LOGCATE("HWCodecPlayer::SetMediaParams [paramType, obj] = [%d, %p]", paramType, obj);
     switch (paramType) {
-        case MEDIA_PARAM_ASSET_MANAGER:
-        {
+        case MEDIA_PARAM_ASSET_MANAGER: {
             bool isAttach = false;
-            m_AssetMgr = GetJNIEnv(&isAttach)->NewGlobalRef(obj);
-            if(isAttach)
-                GetJavaVM()->DetachCurrentThread();
+            m_AssetMgr = getJNIEnv(&isAttach)->NewGlobalRef(obj);
+            if (isAttach)
+                getJavaVM()->DetachCurrentThread();
         }
             break;
         default:
@@ -468,47 +483,50 @@ void HWCodecPlayer::SetMediaParams(int paramType, jobject obj) {
 }
 
 int HWCodecPlayer::InitDecoder() {
-    LOGCATE("HWCodecPlayer::InitDecoder");
+//    LOGCATE("HWCodecPlayer::InitDecoder");
     int result = -1;
     do {
         //1.创建封装格式上下文
         m_AVFormatContext = avformat_alloc_context();
 
         //2.打开文件
-        if(avformat_open_input(&m_AVFormatContext, m_Url, nullptr, nullptr) != 0)
-        {
+        if (avformat_open_input(&m_AVFormatContext, m_Url, nullptr, nullptr) != 0) {
             LOGCATE("HWCodecPlayer::InitDecoder avformat_open_input fail.");
             break;
         }
 
         //3.获取音视频流信息
-        if(avformat_find_stream_info(m_AVFormatContext, nullptr) < 0) {
+        if (avformat_find_stream_info(m_AVFormatContext, nullptr) < 0) {
             LOGCATE("HWCodecPlayer::InitDecoder avformat_find_stream_info fail.");
             break;
         }
 
         //4.获取音视频流索引
         AVCodec *videoCodec = nullptr, *audioCodec = nullptr;
-        m_VideoStreamIdx = av_find_best_stream(m_AVFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1, &videoCodec, 0);
-        if(videoCodec == nullptr) {
+        m_VideoStreamIdx = av_find_best_stream(m_AVFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1,
+                                               &videoCodec, 0);
+        if (videoCodec == nullptr) {
             LOGCATE("HWCodecPlayer::InitDecoder video codec not found.");
             break;
         }
 
-        m_AudioStreamIdx = av_find_best_stream(m_AVFormatContext, AVMEDIA_TYPE_AUDIO, -1, -1, &audioCodec, 0);
-        if(audioCodec == nullptr) {
+        m_AudioStreamIdx = av_find_best_stream(m_AVFormatContext, AVMEDIA_TYPE_AUDIO, -1, -1,
+                                               &audioCodec, 0);
+        if (audioCodec == nullptr) {
             LOGCATE("HWCodecPlayer::InitDecoder audio codec not found.");
             break;
         }
 
-        if(m_AudioStreamIdx * m_VideoStreamIdx < 0) {
-            LOGCATE("HWCodecPlayer::InitDecoder audio or vide stream not found. [m_AudioStreamIdx, m_VideoStreamIdx]=[%d, %d]", m_AudioStreamIdx, m_VideoStreamIdx);
+        if (m_AudioStreamIdx * m_VideoStreamIdx < 0) {
+            LOGCATE("HWCodecPlayer::InitDecoder audio or vide stream not found. [m_AudioStreamIdx, m_VideoStreamIdx]=[%d, %d]",
+                    m_AudioStreamIdx, m_VideoStreamIdx);
             break;
         }
 
         m_VideoCodecCtx = avcodec_alloc_context3(videoCodec);
-        if(m_VideoCodecCtx) {
-            avcodec_parameters_to_context(m_VideoCodecCtx, m_AVFormatContext->streams[m_VideoStreamIdx]->codecpar);
+        if (m_VideoCodecCtx) {
+            avcodec_parameters_to_context(m_VideoCodecCtx,
+                                          m_AVFormatContext->streams[m_VideoStreamIdx]->codecpar);
             m_FrameRate = m_AVFormatContext->streams[m_VideoStreamIdx]->r_frame_rate;
         }
 
@@ -519,39 +537,43 @@ int HWCodecPlayer::InitDecoder() {
         av_dict_set(&pAVDictionary, "rtsp_transport", "tcp", 0);
 
         result = avcodec_open2(m_VideoCodecCtx, videoCodec, &pAVDictionary);
-        if(result < 0) {
+        if (result < 0) {
             LOGCATE("HWCodecPlayer::InitDecoder avcodec_open2 videoCodec fail. result=%d", result);
             break;
         }
 
         m_AudioCodecCtx = avcodec_alloc_context3(audioCodec);
-        if(m_AudioCodecCtx) {
-            avcodec_parameters_to_context(m_AudioCodecCtx, m_AVFormatContext->streams[m_AudioStreamIdx]->codecpar);
+        if (m_AudioCodecCtx) {
+            avcodec_parameters_to_context(m_AudioCodecCtx,
+                                          m_AVFormatContext->streams[m_AudioStreamIdx]->codecpar);
         }
 
         result = avcodec_open2(m_AudioCodecCtx, audioCodec, &pAVDictionary);
-        if(result < 0) {
+        if (result < 0) {
             LOGCATE("HWCodecPlayer::InitDecoder avcodec_open2 audioCodec fail. result=%d", result);
             break;
         }
 
         m_Bsfc = av_bitstream_filter_init("h264_mp4toannexb");
-        if(m_Bsfc == nullptr) {
+        if (m_Bsfc == nullptr) {
             result = -1;
             LOGCATE("HWCodecPlayer::InitDecoder av_bitstream_filter_init(\"h264_mp4toannexb\") fail.");
             break;
         }
 
         bool isAttach = false;
-        JNIEnv *env = GetJNIEnv(&isAttach);
+        JNIEnv *env = getJNIEnv(&isAttach);
 
         off_t outStart, outLen;
         const char *fileName = "byteflow/vr.mp4";
-        int fd = AAsset_openFileDescriptor(AAssetManager_open(AAssetManager_fromJava(env, m_AssetMgr), fileName, 0),&outStart, &outLen);
+        int fd = AAsset_openFileDescriptor(
+                AAssetManager_open(AAssetManager_fromJava(env, m_AssetMgr), fileName, 0), &outStart,
+                &outLen);
 
         m_MediaExtractor = AMediaExtractor_new();
         media_status_t err = AMediaExtractor_setDataSourceFd(m_MediaExtractor, fd,
-                                                             static_cast<off64_t>(outStart),static_cast<off64_t>(outLen));
+                                                             static_cast<off64_t>(outStart),
+                                                             static_cast<off64_t>(outLen));
         close(fd);
         if (err != AMEDIA_OK) {
             result = -1;
@@ -561,11 +583,11 @@ int HWCodecPlayer::InitDecoder() {
 
         int numTracks = AMediaExtractor_getTrackCount(m_MediaExtractor);
 
-        LOGCATE("HWCodecPlayer::InitDecoder AMediaExtractor_getTrackCount %d tracks", numTracks);
+//        LOGCATE("HWCodecPlayer::InitDecoder AMediaExtractor_getTrackCount %d tracks", numTracks);
         for (int i = 0; i < numTracks; i++) {
             AMediaFormat *format = AMediaExtractor_getTrackFormat(m_MediaExtractor, i);
             const char *s = AMediaFormat_toString(format);
-            LOGCATE("HWCodecPlayer::InitDecoder track %d format: %s", i, s);
+//            LOGCATE("HWCodecPlayer::InitDecoder track %d format: %s", i, s);
             const char *mime;
             if (!AMediaFormat_getString(format, AMEDIAFORMAT_KEY_MIME, &mime)) {
                 LOGCATE("HWCodecPlayer::InitDecoder no mime type");
@@ -588,14 +610,15 @@ int HWCodecPlayer::InitDecoder() {
             break;
         }
 
-        if(isAttach)
-            GetJavaVM()->DetachCurrentThread();
+        if (isAttach)
+            getJavaVM()->DetachCurrentThread();
 
         m_SwrCtx = swr_alloc();
         uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
         enum AVSampleFormat out_format = AV_SAMPLE_FMT_S16;
         int out_sample_rate = m_AudioCodecCtx->sample_rate;
-        swr_alloc_set_opts(m_SwrCtx, out_ch_layout, out_format, out_sample_rate, m_AudioCodecCtx->channel_layout,
+        swr_alloc_set_opts(m_SwrCtx, out_ch_layout, out_format, out_sample_rate,
+                           m_AudioCodecCtx->channel_layout,
                            m_AudioCodecCtx->sample_fmt, m_AudioCodecCtx->sample_rate, 0, NULL);
         swr_init(m_SwrCtx);
 
@@ -607,7 +630,7 @@ int HWCodecPlayer::InitDecoder() {
         result = 0;
     } while (false);
 
-    if(result == 0) {
+    if (result == 0) {
         PostMessage(this, MSG_DECODER_READY, 0);
         m_VDecodeThread = new thread(VideoDecodeThreadProc, this);
         m_ADecodeThread = new thread(AudioDecodeThreadProc, this);
@@ -619,62 +642,62 @@ int HWCodecPlayer::InitDecoder() {
 }
 
 int HWCodecPlayer::UnInitDecoder() {
-    LOGCATE("HWCodecPlayer::UnInitDecoder");
-    if(m_ADecodeThread) {
+//    LOGCATE("HWCodecPlayer::UnInitDecoder");
+    if (m_ADecodeThread) {
         m_ADecodeThread->join();
         delete m_ADecodeThread;
         m_ADecodeThread = nullptr;
     }
 
-    if(m_VDecodeThread) {
+    if (m_VDecodeThread) {
         m_VDecodeThread->join();
         delete m_VDecodeThread;
         m_VDecodeThread = nullptr;
     }
 
-    if(m_AudioPacketQueue) {
+    if (m_AudioPacketQueue) {
         m_AudioPacketQueue->Flush();
     }
 
-    if(m_VideoPacketQueue) {
+    if (m_VideoPacketQueue) {
         m_VideoPacketQueue->Flush();
     }
 
-    if(m_Bsfc) {
+    if (m_Bsfc) {
         av_bitstream_filter_close(m_Bsfc);
         m_Bsfc = nullptr;
     }
 
-    if(m_MediaCodec) {
+    if (m_MediaCodec) {
         AMediaCodec_stop(m_MediaCodec);
         AMediaCodec_delete(m_MediaCodec);
         m_MediaCodec = nullptr;
     }
 
-    if(m_MediaExtractor) {
+    if (m_MediaExtractor) {
         AMediaExtractor_delete(m_MediaExtractor);
         m_MediaExtractor = nullptr;
     }
 
-    if(m_VideoCodecCtx != nullptr) {
+    if (m_VideoCodecCtx != nullptr) {
         avcodec_close(m_VideoCodecCtx);
         avcodec_free_context(&m_VideoCodecCtx);
         m_VideoCodecCtx = nullptr;
     }
 
-    if(m_AudioCodecCtx != nullptr) {
+    if (m_AudioCodecCtx != nullptr) {
         avcodec_close(m_AudioCodecCtx);
         avcodec_free_context(&m_AudioCodecCtx);
         m_AudioCodecCtx = nullptr;
     }
 
-    if(m_AVFormatContext != nullptr) {
+    if (m_AVFormatContext != nullptr) {
         avformat_close_input(&m_AVFormatContext);
         avformat_free_context(m_AVFormatContext);
         m_AVFormatContext = nullptr;
     }
 
-    if(m_SwrCtx) {
+    if (m_SwrCtx) {
         swr_close(m_SwrCtx);
         swr_free(&m_SwrCtx);
         m_SwrCtx = nullptr;
@@ -684,38 +707,37 @@ int HWCodecPlayer::UnInitDecoder() {
 }
 
 void HWCodecPlayer::AVSync() {
-    LOGCATE("HWCodecPlayer::AVSync");
+//    LOGCATE("HWCodecPlayer::AVSync");
     double delay = m_VideoClock.curPts - m_VideoClock.lastPts;
     int tickFrame = 1000 * m_FrameRate.den / m_FrameRate.num;
-    LOGCATE("HWCodecPlayer::AVSync tickFrame=%dms", tickFrame);
-    if(delay <= 0 || delay > VIDEO_FRAME_MAX_DELAY) {
+//    LOGCATE("HWCodecPlayer::AVSync tickFrame=%dms", tickFrame);
+    if (delay <= 0 || delay > VIDEO_FRAME_MAX_DELAY) {
         delay = tickFrame;
     }
     double refClock = m_AudioClock.GetClock();// 视频向音频同步
     double avDiff = m_VideoClock.lastPts - refClock;
     m_VideoClock.lastPts = m_VideoClock.curPts;
     double syncThreshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
-    LOGCATE("HWCodecPlayer::AVSync refClock=%lf, delay=%lf, avDiff=%lf, syncThreshold=%lf", refClock, delay, avDiff, syncThreshold);
-    if(avDiff <= -syncThreshold) { //视频比音频慢
-        delay = FFMAX(0,  delay + avDiff);
-    }
-    else if(avDiff >= syncThreshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD) { //视频比音频快太多
+//    LOGCATE("HWCodecPlayer::AVSync refClock=%lf, delay=%lf, avDiff=%lf, syncThreshold=%lf",
+//            refClock, delay, avDiff, syncThreshold);
+    if (avDiff <= -syncThreshold) { //视频比音频慢
+        delay = FFMAX(0, delay + avDiff);
+    } else if (avDiff >= syncThreshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD) { //视频比音频快太多
         delay = delay + avDiff;
-    }
-    else if(avDiff >= syncThreshold)
+    } else if (avDiff >= syncThreshold)
         delay = 2 * delay;
 
-    LOGCATE("HWCodecPlayer::AVSync avDiff=%lf, delay=%lf", avDiff, delay);
+//    LOGCATE("HWCodecPlayer::AVSync avDiff=%lf, delay=%lf", avDiff, delay);
 
     double tickCur = GetSysCurrentTime();
-    double tickDiff =  tickCur - m_VideoClock.frameTimer;//两帧实际的时间间隔
+    double tickDiff = tickCur - m_VideoClock.frameTimer;//两帧实际的时间间隔
     m_VideoClock.frameTimer = tickCur;
 
-    if(tickDiff - tickFrame >  5) delay-=5;
-    if(tickDiff - tickFrame < -5) delay+=5;
+    if (tickDiff - tickFrame > 5) delay -= 5;
+    if (tickDiff - tickFrame < -5) delay += 5;
 
-    LOGCATE("HWCodecPlayer::AVSync delay=%lf, tickDiff=%lf", delay, tickDiff);
-    if(delay > 0) {
+//    LOGCATE("HWCodecPlayer::AVSync delay=%lf, tickDiff=%lf", delay, tickDiff);
+    if (delay > 0) {
         usleep(1000 * delay);
     }
 }

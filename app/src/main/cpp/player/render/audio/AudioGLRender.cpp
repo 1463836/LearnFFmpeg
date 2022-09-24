@@ -16,13 +16,13 @@
 #include <render/video/VideoGLRender.h>
 
 
-AudioGLRender* AudioGLRender::m_pInstance = nullptr;
+AudioGLRender *AudioGLRender::m_pInstance = nullptr;
 std::mutex AudioGLRender::m_Mutex;
 
-AudioGLRender *AudioGLRender::GetInstance() {
-    if(m_pInstance == nullptr) {
+AudioGLRender *AudioGLRender::getInstance() {
+    if (m_pInstance == nullptr) {
         std::unique_lock<std::mutex> lock(m_Mutex);
-        if(m_pInstance == nullptr) {
+        if (m_pInstance == nullptr) {
             m_pInstance = new AudioGLRender();
         }
 
@@ -32,14 +32,14 @@ AudioGLRender *AudioGLRender::GetInstance() {
 
 void AudioGLRender::ReleaseInstance() {
     std::unique_lock<std::mutex> lock(m_Mutex);
-    if(m_pInstance != nullptr) {
+    if (m_pInstance != nullptr) {
         delete m_pInstance;
         m_pInstance = nullptr;
     }
 
 }
 
-void AudioGLRender::OnSurfaceCreated() {
+void AudioGLRender::onSurfaceCreated() {
     ByteFlowPrintE("AudioGLRender::OnSurfaceCreated");
     if (m_ProgramObj)
         return;
@@ -108,14 +108,14 @@ void AudioGLRender::OnSurfaceCreated() {
 
 }
 
-void AudioGLRender::OnSurfaceChanged(int w, int h) {
+void AudioGLRender::onSurfaceChanged(int w, int h) {
     ByteFlowPrintE("AudioGLRender::OnSurfaceChanged [w, h] = [%d, %d]", w, h);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0);
     glViewport(0, 0, w, h);
 
 }
 
-void AudioGLRender::OnDrawFrame() {
+void AudioGLRender::onDrawFrame() {
     ByteFlowPrintD("AudioGLRender::OnDrawFrame");
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     std::unique_lock<std::mutex> lock(m_Mutex);
@@ -124,27 +124,27 @@ void AudioGLRender::OnDrawFrame() {
     lock.unlock();
 
     // Generate VBO Ids and load the VBOs with data
-    if(m_VboIds[0] == 0)
-    {
+    if (m_VboIds[0] == 0) {
         glGenBuffers(2, m_VboIds);
 
         glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * m_RenderDataSize * 6 * 3, m_pVerticesCoords, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * m_RenderDataSize * 6 * 3, m_pVerticesCoords,
+                     GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * m_RenderDataSize * 6 * 2, m_pTextureCoords, GL_DYNAMIC_DRAW);
-    }
-    else
-    {
+        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * m_RenderDataSize * 6 * 2, m_pTextureCoords,
+                     GL_DYNAMIC_DRAW);
+    } else {
         glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * m_RenderDataSize * 6 * 3, m_pVerticesCoords);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * m_RenderDataSize * 6 * 3,
+                        m_pVerticesCoords);
 
         glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * m_RenderDataSize * 6 * 2, m_pTextureCoords);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * m_RenderDataSize * 6 * 2,
+                        m_pTextureCoords);
     }
 
-    if(m_VaoId == GL_NONE)
-    {
+    if (m_VaoId == GL_NONE) {
         glGenVertexArrays(1, &m_VaoId);
         glBindVertexArray(m_VaoId);
 
@@ -173,21 +173,22 @@ void AudioGLRender::OnDrawFrame() {
 }
 
 void AudioGLRender::UpdateAudioFrame(AudioFrame *audioFrame) {
-    if(audioFrame != nullptr) {
-        ByteFlowPrintD("AudioGLRender::UpdateAudioFrame audioFrame->dataSize=%d", audioFrame->dataSize);
+    if (audioFrame != nullptr) {
+        ByteFlowPrintD("AudioGLRender::UpdateAudioFrame audioFrame->dataSize=%d",
+                       audioFrame->dataSize);
         std::unique_lock<std::mutex> lock(m_Mutex);
-        if(m_pAudioBuffer != nullptr && m_pAudioBuffer->dataSize != audioFrame->dataSize) {
+        if (m_pAudioBuffer != nullptr && m_pAudioBuffer->dataSize != audioFrame->dataSize) {
             delete m_pAudioBuffer;
             m_pAudioBuffer = nullptr;
 
-            delete [] m_pTextureCoords;
+            delete[] m_pTextureCoords;
             m_pTextureCoords = nullptr;
 
-            delete [] m_pVerticesCoords;
+            delete[] m_pVerticesCoords;
             m_pVerticesCoords = nullptr;
         }
 
-        if(m_pAudioBuffer == nullptr) {
+        if (m_pAudioBuffer == nullptr) {
             m_pAudioBuffer = new AudioFrame(audioFrame->data, audioFrame->dataSize);
             m_RenderDataSize = m_pAudioBuffer->dataSize / RESAMPLE_LEVEL;
 
@@ -205,7 +206,7 @@ void AudioGLRender::UpdateMesh() {
     float dx = 1.0f / m_RenderDataSize;
     for (int i = 0; i < m_RenderDataSize; ++i) {
         int index = i * RESAMPLE_LEVEL;
-        short *pValue = (short *)(m_pAudioBuffer->data + index);
+        short *pValue = (short *) (m_pAudioBuffer->data + index);
         float y = *pValue * dy;
         y = y < 0 ? y : -y;
         vec2 p1(i * dx, 0 + 1.0f);
@@ -247,12 +248,12 @@ void AudioGLRender::UnInit() {
     }
 
     if (m_pTextureCoords != nullptr) {
-        delete [] m_pTextureCoords;
+        delete[] m_pTextureCoords;
         m_pTextureCoords = nullptr;
     }
 
     if (m_pVerticesCoords != nullptr) {
-        delete [] m_pVerticesCoords;
+        delete[] m_pVerticesCoords;
         m_pVerticesCoords = nullptr;
     }
 }

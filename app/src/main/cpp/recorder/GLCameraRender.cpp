@@ -6,11 +6,17 @@
  *
  * */
 
+//通过定义STB_IMAGE_IMPLEMENTATION，预处理器会修改头文件，让其只包含相关的函数定义源码，等于是将这个头文件变为一个.cpp 文件了,一个项目只需要定义一次
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "GLCameraRender.h"
 #include <GLUtils.h>
 #include <gtc/matrix_transform.hpp>
+#include "stb_image_write.h"
+#include "stb_image.h"
 
-GLCameraRender* GLCameraRender::s_Instance = nullptr;
+GLCameraRender *GLCameraRender::instance = nullptr;
 std::mutex GLCameraRender::m_Mutex;
 
 static char vShaderStr[] =
@@ -83,10 +89,10 @@ static char fShaderStr[] =
         "}";
 
 static GLfloat verticesCoords[] = {
-        -1.0f,  1.0f, 0.0f,  // Position 0
+        -1.0f, 1.0f, 0.0f,  // Position 0
         -1.0f, -1.0f, 0.0f,  // Position 1
-        1.0f,  -1.0f, 0.0f,  // Position 2
-        1.0f,   1.0f, 0.0f,  // Position 3
+        1.0f, -1.0f, 0.0f,  // Position 2
+        1.0f, 1.0f, 0.0f,  // Position 3
 };
 
 //static GLfloat textureCoords[] = {
@@ -96,65 +102,65 @@ static GLfloat verticesCoords[] = {
 //        1.0f,  1.0f         // TexCoord 3
 //};
 static GLfloat textureCoords[] = {
-        0.0f,  0.0f,        // TexCoord 0
-        0.0f,  1.0f,        // TexCoord 1
-        1.0f,  1.0f,        // TexCoord 2
-        1.0f,  0.0f         // TexCoord 3
+        0.0f, 0.0f,        // TexCoord 0
+        0.0f, 1.0f,        // TexCoord 1
+        1.0f, 1.0f,        // TexCoord 2
+        1.0f, 0.0f         // TexCoord 3
 };
 
-static GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
+static GLushort indices[] = {0, 1, 2, 0, 2, 3};
 
-GLCameraRender::GLCameraRender():VideoRender(VIDEO_RENDER_OPENGL) {
+GLCameraRender::GLCameraRender() : VideoRender(VIDEO_RENDER_OPENGL) {
 
 }
 
 GLCameraRender::~GLCameraRender() {
-    NativeImageUtil::FreeNativeImage(&m_RenderImage);
+    NativeImageUtil::FreeNativeImage(&renderImage);
 
 }
 
-void GLCameraRender::Init(int videoWidth, int videoHeight, int *dstSize) {
-    LOGCATE("GLCameraRender::InitRender video[w, h]=[%d, %d]", videoWidth, videoHeight);
-    if(dstSize != nullptr) {
+//0, 0, nullptr)
+void GLCameraRender::init(int videoWidth, int videoHeight, int *dstSize) {
+//    LOGCATE("GLCameraRender::InitRender video[w, h]=[%d, %d]", videoWidth, videoHeight);
+    if (dstSize != nullptr) {
         dstSize[0] = videoWidth;
         dstSize[1] = videoHeight;
     }
-    m_FrameIndex = 0;
-    UpdateMVPMatrix(0, 0, 1.0f, 1.0f);
+    frameIndex = 0;
+    updateMVPMatrix(0, 0, 1.0f, 1.0f);
 }
 
-void GLCameraRender::RenderVideoFrame(NativeImage *pImage) {
-    LOGCATE("GLCameraRender::RenderVideoFrame pImage=%p", pImage);
-    if(pImage == nullptr || pImage->ppPlane[0] == nullptr)
+void GLCameraRender::renderVideoFrame(NativeImage *pImage) {
+//    LOGCATE("GLCameraRender::RenderVideoFrame pImage=%p", pImage);
+    if (pImage == nullptr || pImage->inData[0] == nullptr)
         return;
     std::unique_lock<std::mutex> lock(m_Mutex);
-    if (pImage->width != m_RenderImage.width || pImage->height != m_RenderImage.height) {
-        if (m_RenderImage.ppPlane[0] != nullptr) {
-            NativeImageUtil::FreeNativeImage(&m_RenderImage);
+    if (pImage->width != renderImage.width || pImage->height != renderImage.height) {
+        if (renderImage.inData[0] != nullptr) {
+            NativeImageUtil::FreeNativeImage(&renderImage);
         }
-        memset(&m_RenderImage, 0, sizeof(NativeImage));
-        m_RenderImage.format = pImage->format;
-        m_RenderImage.width = pImage->width;
-        m_RenderImage.height = pImage->height;
-        NativeImageUtil::AllocNativeImage(&m_RenderImage);
+        memset(&renderImage, 0, sizeof(NativeImage));
+        renderImage.format = pImage->format;
+        renderImage.width = pImage->width;
+        renderImage.height = pImage->height;
+        NativeImageUtil::AllocNativeImage(&renderImage);
     }
 
-    NativeImageUtil::CopyNativeImage(pImage, &m_RenderImage);
+    NativeImageUtil::CopyNativeImage(pImage, &renderImage);
     //NativeImageUtil::DumpNativeImage(&m_RenderImage, "/sdcard", "camera");
 }
 
-void GLCameraRender::UnInit() {
-    NativeImageUtil::FreeNativeImage(&m_ExtImage);
+void GLCameraRender::unInit() {
+    NativeImageUtil::FreeNativeImage(&extImage);
 
-    if(m_pFragShaderBuffer != nullptr) {
-        free(m_pFragShaderBuffer);
-        m_pFragShaderBuffer = nullptr;
+    if (fragShaderBuffer != nullptr) {
+        free(fragShaderBuffer);
+        fragShaderBuffer = nullptr;
     }
 
 }
 
-void GLCameraRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY)
-{
+void GLCameraRender::updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) {
     angleX = angleX % 360;
     angleY = angleY % 360;
 
@@ -180,13 +186,13 @@ void GLCameraRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float
     Model = glm::rotate(Model, radiansY, glm::vec3(0.0f, 1.0f, 0.0f));
     Model = glm::translate(Model, glm::vec3(0.0f, 0.0f, 0.0f));
 
-    m_MVPMatrix = Projection * View * Model;
+    MVPMatrix = Projection * View * Model;
 
 }
 
-void GLCameraRender::UpdateMVPMatrix(TransformMatrix *pTransformMatrix) {
+void GLCameraRender::updateMVPMatrix(TransformMatrix *pTransformMatrix) {
     //BaseGLRender::UpdateMVPMatrix(pTransformMatrix);
-    m_transformMatrix = *pTransformMatrix;
+    transformMatrix = *pTransformMatrix;
 
     //转化为弧度角
     float radiansX = static_cast<float>(MATH_PI / 180.0f * pTransformMatrix->angleX);
@@ -235,30 +241,31 @@ void GLCameraRender::UpdateMVPMatrix(TransformMatrix *pTransformMatrix) {
     Model = glm::rotate(Model, radiansX, glm::vec3(1.0f, 0.0f, 0.0f));
     Model = glm::rotate(Model, radiansY, glm::vec3(0.0f, 1.0f, 0.0f));
     Model = glm::translate(Model,
-                           glm::vec3(pTransformMatrix->translateX, pTransformMatrix->translateY, 0.0f));
+                           glm::vec3(pTransformMatrix->translateX, pTransformMatrix->translateY,
+                                     0.0f));
 
-    LOGCATE("GLCameraRender::UpdateMVPMatrix rotate %d,%.2f,%0.5f,%0.5f,%0.5f,%0.5f,", pTransformMatrix->degree, fRotate,
-            pTransformMatrix->translateX, pTransformMatrix->translateY,
-            fFactorX * pTransformMatrix->scaleX, fFactorY * pTransformMatrix->scaleY);
+//    LOGCATE("GLCameraRender::UpdateMVPMatrix rotate %d,%.2f,%0.5f,%0.5f,%0.5f,%0.5f,",
+//            pTransformMatrix->degree, fRotate,
+//            pTransformMatrix->translateX, pTransformMatrix->translateY,
+//            fFactorX * pTransformMatrix->scaleX, fFactorY * pTransformMatrix->scaleY);
 
-    m_MVPMatrix = Projection * View * Model;
+    MVPMatrix = Projection * View * Model;
 }
 
-void GLCameraRender::OnSurfaceCreated() {
-    LOGCATE("GLCameraRender::OnSurfaceCreated");
+void GLCameraRender::onSurfaceCreated() {
+//    LOGCATE("GLCameraRender::OnSurfaceCreated");
 
-    m_ProgramObj = GLUtils::CreateProgram(vShaderStr, fShaderStr);
-    m_FboProgramObj = GLUtils::CreateProgram(vShaderStr, fShaderStr);
-    if (!m_ProgramObj || !m_FboProgramObj)
-    {
+    programID = GLUtils::CreateProgram(vShaderStr, fShaderStr);
+    fboProgramID = GLUtils::CreateProgram(vShaderStr, fShaderStr);
+    if (!programID || !fboProgramID) {
         LOGCATE("GLCameraRender::OnSurfaceCreated create program fail");
         return;
     }
 
-    glGenTextures(TEXTURE_NUM, m_TextureIds);
-    for (int i = 0; i < TEXTURE_NUM ; ++i) {
+    glGenTextures(TEXTURE_NUM, textureIds);
+    for (int i = 0; i < TEXTURE_NUM; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, m_TextureIds[i]);
+        glBindTexture(GL_TEXTURE_2D, textureIds[i]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -267,249 +274,251 @@ void GLCameraRender::OnSurfaceCreated() {
     }
 
     // Generate VBO Ids and load the VBOs with data
-    glGenBuffers(3, m_VboIds);
-    glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
+    glGenBuffers(3, vboIds);
+    glBindBuffer(GL_ARRAY_BUFFER, vboIds[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCoords), verticesCoords, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, vboIds[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VboIds[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIds[2]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // Generate VAO Id
-    glGenVertexArrays(1, &m_VaoId);
-    glBindVertexArray(m_VaoId);
+    glGenVertexArrays(1, &vaoId);
+    glBindVertexArray(vaoId);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vboIds[0]);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (const void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, vboIds[1]);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (const void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VboIds[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIds[2]);
 
     glBindVertexArray(GL_NONE);
 
-    m_TouchXY = vec2(0.5f, 0.5f);
+    touchXY = vec2(0.5f, 0.5f);
 }
 
-void GLCameraRender::OnSurfaceChanged(int w, int h) {
-    LOGCATE("GLCameraRender::OnSurfaceChanged [w, h]=[%d, %d]", w, h);
-    m_ScreenSize.x = w;
-    m_ScreenSize.y = h;
+void GLCameraRender::onSurfaceChanged(int w, int h) {
+//    LOGCATE("GLCameraRender::OnSurfaceChanged [w, h]=[%d, %d]", w, h);
+    screenSize.x = w;
+    screenSize.y = h;
     glViewport(0, 0, w, h);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 }
 
-void GLCameraRender::OnDrawFrame() {
-    if(m_IsShaderChanged) {
-        unique_lock<mutex> lock(m_ShaderMutex);
-        GLUtils::DeleteProgram(m_FboProgramObj);
-        m_FboProgramObj = GLUtils::CreateProgram(vShaderStr, m_pFragShaderBuffer);
-        m_IsShaderChanged = false;
+void GLCameraRender::onDrawFrame() {
+    if (isShaderChanged) {
+        unique_lock<mutex> lock(shaderMutex);
+        GLUtils::DeleteProgram(fboProgramID);
+        fboProgramID = GLUtils::CreateProgram(vShaderStr, fragShaderBuffer);
+        isShaderChanged = false;
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
-    if(m_ProgramObj == GL_NONE || m_RenderImage.ppPlane[0] == nullptr) return;
-    if(m_SrcFboId == GL_NONE && CreateFrameBufferObj()) {
+    if (programID == GL_NONE || renderImage.inData[0] == nullptr)
+        return;
+    if (fbo == GL_NONE && createFrameBufferObj()) {
         LOGCATE("GLCameraRender::OnDrawFrame CreateFrameBufferObj fail");
         return;
     }
-    LOGCATE("GLCameraRender::OnDrawFrame [w, h]=[%d, %d], format=%d", m_RenderImage.width, m_RenderImage.height, m_RenderImage.format);
-    m_FrameIndex++;
+//    LOGCATE("GLCameraRender::OnDrawFrame [w, h]=[%d, %d], format=%d screenSize x %d screenSize y %d", renderImage.width,
+//            renderImage.height, renderImage.format,screenSize.x,screenSize.y);
+    frameIndex++;
 
-    UpdateExtTexture();
+    updateExtTexture();
 
     std::unique_lock<std::mutex> lock(m_Mutex);
     // 渲染到 FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, m_SrcFboId);
-    glViewport(0, 0, m_RenderImage.height, m_RenderImage.width); //相机的宽和高反了
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, renderImage.height, renderImage.width); //相机的宽和高反了
+    glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(m_FboProgramObj);
+    glUseProgram(fboProgramID);
     // upload image data
 
-    glBindTexture(GL_TEXTURE_2D, m_SrcFboTextureId);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.height, m_RenderImage.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, fboTextureId);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderImage.height, renderImage.width, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, nullptr);
 
-    glBindTexture(GL_TEXTURE_2D, m_DstFboTextureId);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.height, m_RenderImage.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, destFboTextureId);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderImage.height, renderImage.width, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, nullptr);
 
-    switch (m_RenderImage.format)
-    {
+    switch (renderImage.format) {
         case IMAGE_FORMAT_RGBA:
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.width, m_RenderImage.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_RenderImage.ppPlane[0]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderImage.width, renderImage.height, 0,
+                         GL_RGBA, GL_UNSIGNED_BYTE, renderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         case IMAGE_FORMAT_NV21:
         case IMAGE_FORMAT_NV12:
             //upload Y plane data
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width,
-                         m_RenderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[0]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, renderImage.width,
+                         renderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                         renderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update UV plane data
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[1]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, m_RenderImage.width >> 1,
-                         m_RenderImage.height >> 1, 0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[1]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[1]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, renderImage.width >> 1,
+                         renderImage.height >> 1, 0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE,
+                         renderImage.inData[1]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         case IMAGE_FORMAT_I420:
             //upload Y plane data
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width,
-                         m_RenderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[0]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, renderImage.width,
+                         renderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                         renderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update U plane data
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[1]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width >> 1,
-                         m_RenderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[1]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[1]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, renderImage.width >> 1,
+                         renderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                         renderImage.inData[1]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update V plane data
             glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, m_TextureIds[2]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width >> 1,
-                         m_RenderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[2]);
+            glBindTexture(GL_TEXTURE_2D, textureIds[2]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, renderImage.width >> 1,
+                         renderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                         renderImage.inData[2]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         default:
             break;
     }
 
-    glBindVertexArray(m_VaoId);
-    UpdateMVPMatrix(&m_transformMatrix);
-    GLUtils::setMat4(m_FboProgramObj, "u_MVPMatrix", m_MVPMatrix);
+    glBindVertexArray(vaoId);
+    updateMVPMatrix(&transformMatrix);
+    GLUtils::setMat4(fboProgramID, "u_MVPMatrix", MVPMatrix);
     for (int i = 0; i < TEXTURE_NUM; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, m_TextureIds[i]);
+        glBindTexture(GL_TEXTURE_2D, textureIds[i]);
         char samplerName[64] = {0};
         sprintf(samplerName, "s_texture%d", i);
-        GLUtils::setInt(m_FboProgramObj, samplerName, i);
+        GLUtils::setInt(fboProgramID, samplerName, i);
     }
-    float offset = (sin(m_FrameIndex * MATH_PI / 40) + 1.0f) / 2.0f;
-    GLUtils::setFloat(m_FboProgramObj, "u_Offset", offset);
-    GLUtils::setVec2(m_FboProgramObj, "u_TexSize", vec2(m_RenderImage.width, m_RenderImage.height));
-    GLUtils::setInt(m_FboProgramObj, "u_nImgType", m_RenderImage.format);
+    float offset = (sin(frameIndex * MATH_PI / 40) + 1.0f) / 2.0f;
+    GLUtils::setFloat(fboProgramID, "u_Offset", offset);
+    GLUtils::setVec2(fboProgramID, "u_TexSize", vec2(renderImage.width, renderImage.height));
+    GLUtils::setInt(fboProgramID, "u_nImgType", renderImage.format);
 
-    switch (m_ShaderIndex) {
+    switch (shaderIndex) {
         case SHADER_INDEX_ORIGIN:
             break;
         case SHADER_INDEX_DMESH:
             break;
         case SHADER_INDEX_GHOST:
-            offset = m_FrameIndex % 60 / 60.0f - 0.2f;
-            if(offset < 0) offset = 0;
-            GLUtils::setFloat(m_FboProgramObj, "u_Offset", offset);
+            offset = frameIndex % 60 / 60.0f - 0.2f;
+            if (offset < 0) offset = 0;
+            GLUtils::setFloat(fboProgramID, "u_Offset", offset);
             break;
         case SHADER_INDEX_CIRCLE:
             break;
         case SHADER_INDEX_ASCII:
             glActiveTexture(GL_TEXTURE0 + TEXTURE_NUM);
-            glBindTexture(GL_TEXTURE_2D, m_ExtTextureId);
-            GLUtils::setInt(m_FboProgramObj, "s_textureMapping", TEXTURE_NUM);
-            GLUtils::setVec2(m_FboProgramObj, "asciiTexSize", vec2(m_ExtImage.width, m_ExtImage.height));
+            glBindTexture(GL_TEXTURE_2D, extTextureId);
+            GLUtils::setInt(fboProgramID, "s_textureMapping", TEXTURE_NUM);
+            GLUtils::setVec2(fboProgramID, "asciiTexSize",
+                             vec2(extImage.width, extImage.height));
             break;
         case SHADER_INDEX_LUT_A:
         case SHADER_INDEX_LUT_B:
         case SHADER_INDEX_LUT_C:
             glActiveTexture(GL_TEXTURE0 + TEXTURE_NUM);
-            glBindTexture(GL_TEXTURE_2D, m_ExtTextureId);
-            GLUtils::setInt(m_FboProgramObj, "s_LutTexture", TEXTURE_NUM);
+            glBindTexture(GL_TEXTURE_2D, extTextureId);
+            GLUtils::setInt(fboProgramID, "s_LutTexture", TEXTURE_NUM);
             break;
         case SHADER_INDEX_NE:
-            offset = (sin(m_FrameIndex * MATH_PI / 60) + 1.0f) / 2.0f;
-            GLUtils::setFloat(m_FboProgramObj, "u_Offset", offset);
+            offset = (sin(frameIndex * MATH_PI / 60) + 1.0f) / 2.0f;
+            GLUtils::setFloat(fboProgramID, "u_Offset", offset);
             break;
         default:
             break;
     }
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *)0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *) 0);
 
     //再绘制一次，把方向倒过来
-    glBindFramebuffer(GL_FRAMEBUFFER, m_DstFboId);
-    glViewport(0, 0, m_RenderImage.height, m_RenderImage.width); //相机的宽和高反了,
+    glBindFramebuffer(GL_FRAMEBUFFER, destFboId);
+    glViewport(0, 0, renderImage.height, renderImage.width); //相机的宽和高反了,
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram (m_ProgramObj);
-    glBindVertexArray(m_VaoId);
+    glUseProgram(programID);
+    glBindVertexArray(vaoId);
 
-    UpdateMVPMatrix(0, 0, 1.0, 1.0);
-    GLUtils::setMat4(m_ProgramObj, "u_MVPMatrix", m_MVPMatrix);
+    updateMVPMatrix(0, 0, 1.0, 1.0);
+    GLUtils::setMat4(programID, "u_MVPMatrix", MVPMatrix);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_SrcFboTextureId);
-    GLUtils::setInt(m_ProgramObj, "s_texture0", 0);
-    GLUtils::setInt(m_ProgramObj, "u_nImgType", IMAGE_FORMAT_RGBA);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *)0);
+    glBindTexture(GL_TEXTURE_2D, fboTextureId);
+    GLUtils::setInt(programID, "s_texture0", 0);
+    GLUtils::setInt(programID, "u_nImgType", IMAGE_FORMAT_RGBA);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *) 0);
 
-    GetRenderFrameFromFBO();
+    getRenderFrameFromFBO();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     lock.unlock();
 
     // 渲染到屏幕
-    glViewport(0, 0, m_ScreenSize.x, m_ScreenSize.y);
+    glViewport(0, 0, screenSize.x, screenSize.y);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
-    UpdateMVPMatrix(0, 0, 1.0, 1.0);
-    GLUtils::setMat4(m_ProgramObj, "u_MVPMatrix", m_MVPMatrix);
+    updateMVPMatrix(0, 0, 1.0, 1.0);
+    GLUtils::setMat4(programID, "u_MVPMatrix", MVPMatrix);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_DstFboTextureId);
-    GLUtils::setInt(m_ProgramObj, "s_texture0", 0);
+    glBindTexture(GL_TEXTURE_2D, destFboTextureId);
+    GLUtils::setInt(programID, "s_texture0", 0);
 
-    GLUtils::setInt(m_ProgramObj, "u_nImgType", IMAGE_FORMAT_RGBA);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *)0);
+    GLUtils::setInt(programID, "u_nImgType", IMAGE_FORMAT_RGBA);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *) 0);
 }
 
-GLCameraRender *GLCameraRender::GetInstance() {
-    if(s_Instance == nullptr)
-    {
+GLCameraRender *GLCameraRender::getInstance() {
+    if (instance == nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance == nullptr)
-        {
-            s_Instance = new GLCameraRender();
+        if (instance == nullptr) {
+            instance = new GLCameraRender();
         }
-
     }
-    return s_Instance;
+    return instance;
 }
 
-void GLCameraRender::ReleaseInstance() {
-    if(s_Instance != nullptr)
-    {
+void GLCameraRender::releaseInstance() {
+    if (instance != nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance != nullptr)
-        {
-            delete s_Instance;
-            s_Instance = nullptr;
+        if (instance != nullptr) {
+            delete instance;
+            instance = nullptr;
         }
 
     }
 }
 
-bool GLCameraRender::CreateFrameBufferObj() {
+bool GLCameraRender::createFrameBufferObj() {
     // 创建并初始化 FBO 纹理
-    if(m_SrcFboTextureId == GL_NONE) {
-        glGenTextures(1, &m_SrcFboTextureId);
-        glBindTexture(GL_TEXTURE_2D, m_SrcFboTextureId);
+    if (fboTextureId == GL_NONE) {
+        glGenTextures(1, &fboTextureId);
+        glBindTexture(GL_TEXTURE_2D, fboTextureId);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -517,9 +526,9 @@ bool GLCameraRender::CreateFrameBufferObj() {
         glBindTexture(GL_TEXTURE_2D, GL_NONE);
     }
 
-    if(m_DstFboTextureId == GL_NONE) {
-        glGenTextures(1, &m_DstFboTextureId);
-        glBindTexture(GL_TEXTURE_2D, m_DstFboTextureId);
+    if (destFboTextureId == GL_NONE) {
+        glGenTextures(1, &destFboTextureId);
+        glBindTexture(GL_TEXTURE_2D, destFboTextureId);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -528,22 +537,26 @@ bool GLCameraRender::CreateFrameBufferObj() {
     }
 
     // 创建并初始化 FBO
-    if(m_SrcFboId == GL_NONE) {
-        glGenFramebuffers(1, &m_SrcFboId);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_SrcFboId);
-        glBindTexture(GL_TEXTURE_2D, m_SrcFboTextureId);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_SrcFboTextureId, 0);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.height, m_RenderImage.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER)!= GL_FRAMEBUFFER_COMPLETE) {
-            LOGCATE("GLCameraRender::CreateFrameBufferObj glCheckFramebufferStatus status != GL_FRAMEBUFFER_COMPLETE");
-            if(m_SrcFboTextureId != GL_NONE) {
-                glDeleteTextures(1, &m_SrcFboTextureId);
-                m_SrcFboTextureId = GL_NONE;
+    if (fbo == GL_NONE) {
+        glGenFramebuffers(1, &fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+        glBindTexture(GL_TEXTURE_2D, fboTextureId);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               fboTextureId, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderImage.height, renderImage.width, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+//            LOGCATE("GLCameraRender::CreateFrameBufferObj glCheckFramebufferStatus status != GL_FRAMEBUFFER_COMPLETE");
+            if (fboTextureId != GL_NONE) {
+                glDeleteTextures(1, &fboTextureId);
+                fboTextureId = GL_NONE;
             }
 
-            if(m_SrcFboId != GL_NONE) {
-                glDeleteFramebuffers(1, &m_SrcFboId);
-                m_SrcFboId = GL_NONE;
+            if (fbo != GL_NONE) {
+                glDeleteFramebuffers(1, &fbo);
+                fbo = GL_NONE;
             }
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             glBindFramebuffer(GL_FRAMEBUFFER, GL_NONE);
@@ -551,22 +564,24 @@ bool GLCameraRender::CreateFrameBufferObj() {
         }
     }
 
-    if(m_DstFboId == GL_NONE) {
-        glGenFramebuffers(1, &m_DstFboId);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_DstFboId);
-        glBindTexture(GL_TEXTURE_2D, m_DstFboTextureId);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_DstFboTextureId, 0);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.height, m_RenderImage.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER)!= GL_FRAMEBUFFER_COMPLETE) {
-            LOGCATE("GLCameraRender::CreateFrameBufferObj glCheckFramebufferStatus status != GL_FRAMEBUFFER_COMPLETE");
-            if(m_DstFboTextureId != GL_NONE) {
-                glDeleteTextures(1, &m_DstFboTextureId);
-                m_DstFboTextureId = GL_NONE;
+    if (destFboId == GL_NONE) {
+        glGenFramebuffers(1, &destFboId);
+        glBindFramebuffer(GL_FRAMEBUFFER, destFboId);
+        glBindTexture(GL_TEXTURE_2D, destFboTextureId);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               destFboTextureId, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderImage.height, renderImage.width, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+//            LOGCATE("GLCameraRender::CreateFrameBufferObj glCheckFramebufferStatus status != GL_FRAMEBUFFER_COMPLETE");
+            if (destFboTextureId != GL_NONE) {
+                glDeleteTextures(1, &destFboTextureId);
+                destFboTextureId = GL_NONE;
             }
 
-            if(m_DstFboId != GL_NONE) {
-                glDeleteFramebuffers(1, &m_DstFboId);
-                m_DstFboId = GL_NONE;
+            if (destFboId != GL_NONE) {
+                glDeleteFramebuffers(1, &destFboId);
+                destFboId = GL_NONE;
             }
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             glBindFramebuffer(GL_FRAMEBUFFER, GL_NONE);
@@ -579,68 +594,82 @@ bool GLCameraRender::CreateFrameBufferObj() {
     return true;
 }
 
-void GLCameraRender::GetRenderFrameFromFBO() {
-    LOGCATE("GLCameraRender::GetRenderFrameFromFBO m_RenderFrameCallback=%p", m_RenderFrameCallback);
-    if(m_RenderFrameCallback != nullptr) {
-        uint8_t *pBuffer = new uint8_t[m_RenderImage.width * m_RenderImage.height * 4];
-        NativeImage nativeImage = m_RenderImage;
+static int index = 0;
+
+void GLCameraRender::getRenderFrameFromFBO() {
+//    LOGCATE("GLCameraRender::GetRenderFrameFromFBO m_RenderFrameCallback=%p",
+//            renderFrameCallback);
+    if (renderFrameCallback != nullptr) {
+        uint8_t *pBuffer = new uint8_t[renderImage.width * renderImage.height * 4];
+        NativeImage nativeImage = renderImage;
         nativeImage.format = IMAGE_FORMAT_RGBA;
-        nativeImage.width = m_RenderImage.height;
-        nativeImage.height = m_RenderImage.width;
-        nativeImage.pLineSize[0] = nativeImage.width * 4;
-        nativeImage.ppPlane[0] = pBuffer;
-        glReadPixels(0, 0, nativeImage.width, nativeImage.height, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
-        m_RenderFrameCallback(m_CallbackContext, &nativeImage);
-        delete []pBuffer;
+        nativeImage.width = renderImage.height;
+        nativeImage.height = renderImage.width;
+        nativeImage.inSize[0] = nativeImage.width * 4;
+        nativeImage.inData[0] = pBuffer;
+        glReadPixels(0, 0, nativeImage.width, nativeImage.height, GL_RGBA, GL_UNSIGNED_BYTE,
+                     pBuffer);
+        renderFrameCallback(callbackContext, &nativeImage);
+
+//        LOGCATE("GetRenderFrameFromFBO nativeImage.width %d nativeImage.height %d", nativeImage.width, nativeImage.height);
+
+//        char path[256];
+//        sprintf(path, "/sdcard/capture%d.png", ((index++) % 6));
+//        int ret =  stbi_write_jpg(path, nativeImage.width, nativeImage.height, 3,pBuffer,0);
+//        int ret = stbi_write_png(path, nativeImage.width, nativeImage.height, 4,
+//                                 pBuffer, nativeImage.width * 4);
+//        LOGCATE("write %s ret %d width %d.height %d ", path, ret, nativeImage.width,
+//                nativeImage.height);
+        delete[]pBuffer;
     }
 }
 
-void GLCameraRender::SetFragShaderStr(int index, char *pShaderStr, int strSize) {
-    LOGCATE("GLByteFlowRender::LoadFragShaderScript pShaderStr = %p, shaderIndex=%d", pShaderStr,
-            index);
-    if(m_ShaderIndex != index) {
-        unique_lock<mutex> lock(m_ShaderMutex);
-        if(m_pFragShaderBuffer != nullptr) {
-            free(m_pFragShaderBuffer);
-            m_pFragShaderBuffer = nullptr;
+void GLCameraRender::setFragShaderStr(int index, char *pShaderStr, int strSize) {
+//    LOGCATE("GLByteFlowRender::LoadFragShaderScript pShaderStr = %p, shaderIndex=%d", pShaderStr,
+//            index);
+    if (shaderIndex != index) {
+        unique_lock<mutex> lock(shaderMutex);
+        if (fragShaderBuffer != nullptr) {
+            free(fragShaderBuffer);
+            fragShaderBuffer = nullptr;
         }
-        m_ShaderIndex = index;
-        m_pFragShaderBuffer = static_cast<char *>(malloc(strSize));
-        memcpy(m_pFragShaderBuffer, pShaderStr, strSize);
-        m_IsShaderChanged = true;
+        shaderIndex = index;
+        fragShaderBuffer = static_cast<char *>(malloc(strSize));
+        memcpy(fragShaderBuffer, pShaderStr, strSize);
+        isShaderChanged = true;
     }
 
 }
 
-void GLCameraRender::SetLUTImage(int index, NativeImage *pLUTImg) {
-    LOGCATE("GLCameraRender::SetLUTImage pImage = %p, index=%d", pLUTImg->ppPlane[0],
-            index);
+void GLCameraRender::setLUTImage(int index, NativeImage *pLUTImg) {
+//    LOGCATE("GLCameraRender::SetLUTImage pImage = %p, index=%d", pLUTImg->inData[0],
+//            index);
     unique_lock<mutex> lock(m_Mutex);
-    NativeImageUtil::FreeNativeImage(&m_ExtImage);
-    m_ExtImage.width = pLUTImg->width;
-    m_ExtImage.height = pLUTImg->height;
-    m_ExtImage.format = pLUTImg->format;
-    NativeImageUtil::AllocNativeImage(&m_ExtImage);
-    NativeImageUtil::CopyNativeImage(pLUTImg, &m_ExtImage);
-    m_ExtImageChanged = true;
+    NativeImageUtil::FreeNativeImage(&extImage);
+    extImage.width = pLUTImg->width;
+    extImage.height = pLUTImg->height;
+    extImage.format = pLUTImg->format;
+    NativeImageUtil::AllocNativeImage(&extImage);
+    NativeImageUtil::CopyNativeImage(pLUTImg, &extImage);
+    extImageChanged = true;
 }
 
-void GLCameraRender::UpdateExtTexture() {
-    LOGCATE("GLCameraRender::UpdateExtTexture");
-    if(m_ExtImageChanged && m_ExtImage.ppPlane[0] != nullptr) {
-        if(m_ExtTextureId != GL_NONE) {
-            glDeleteTextures(1, &m_ExtTextureId);
+void GLCameraRender::updateExtTexture() {
+//    LOGCATE("GLCameraRender::UpdateExtTexture");
+    if (extImageChanged && extImage.inData[0] != nullptr) {
+        if (extTextureId != GL_NONE) {
+            glDeleteTextures(1, &extTextureId);
         }
-        glGenTextures(1, &m_ExtTextureId);
-        glBindTexture(GL_TEXTURE_2D, m_ExtTextureId);
+        glGenTextures(1, &extTextureId);
+        glBindTexture(GL_TEXTURE_2D, extTextureId);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_ExtImage.width, m_ExtImage.height, 0,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, extImage.width, extImage.height, 0,
                      GL_RGBA,
-                     GL_UNSIGNED_BYTE, m_ExtImage.ppPlane[0]);
-        m_ExtImageChanged = false;
+                     GL_UNSIGNED_BYTE, extImage.inData[0]);
+        extImageChanged = false;
     }
 }
 

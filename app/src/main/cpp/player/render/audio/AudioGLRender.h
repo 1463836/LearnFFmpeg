@@ -24,24 +24,32 @@ using namespace glm;
 
 class AudioGLRender : public BaseGLRender {
 public:
-    static AudioGLRender* GetInstance();
+    static AudioGLRender *getInstance();
+
     static void ReleaseInstance();
 
-    virtual void OnSurfaceCreated();
-    virtual void OnSurfaceChanged(int w, int h);
-    virtual void OnDrawFrame();
-    virtual void UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY){};
-    virtual void SetTouchLoc(float touchX, float touchY) {}
+    virtual void onSurfaceCreated();
+
+    virtual void onSurfaceChanged(int w, int h);
+
+    virtual void onDrawFrame();
+
+    virtual void updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) {};
+
+    virtual void setTouchLoc(float touchX, float touchY) {}
 
     void UpdateAudioFrame(AudioFrame *audioFrame);
 
 private:
     void Init();
+
     void UnInit();
-    AudioGLRender(){
+
+    AudioGLRender() {
         Init();
     }
-    ~AudioGLRender(){
+
+    ~AudioGLRender() {
         UnInit();
     }
 

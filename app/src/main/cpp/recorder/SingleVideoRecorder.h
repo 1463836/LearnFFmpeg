@@ -27,18 +27,23 @@ using namespace std;
 
 class SingleVideoRecorder {
 public:
-    SingleVideoRecorder(const char* outUrl, int frameWidth, int frameHeight, long bitRate, int fps);
+    SingleVideoRecorder(const char *outUrl, int frameWidth, int frameHeight, long bitRate, int fps);
+
     ~SingleVideoRecorder();
 
     int StartRecord();
-    int OnFrame2Encode(NativeImage *inputFrame);
+
+    int OnFrame2Encode(NativeImage *nativeImage);
+
     int StopRecord();
 
 private:
     static void StartH264EncoderThread(SingleVideoRecorder *context);
+
     int EncodeFrame(AVFrame *pFrame);
+
 private:
-    ThreadSafeQueue<NativeImage *> m_frameQueue;
+    ThreadSafeQueue<NativeImage *> frameQueue;
     char m_outUrl[1024] = {0};
     int m_frameWidth;
     int m_frameHeight;
@@ -46,9 +51,9 @@ private:
     long m_bitRate;
     int m_frameRate;
     AVPacket m_avPacket;
-    AVFrame  *m_pFrame = nullptr;
+    AVFrame *m_pFrame = nullptr;
     uint8_t *m_pFrameBuffer = nullptr;
-    AVCodec  *m_pCodec = nullptr;
+    AVCodec *m_pCodec = nullptr;
     AVStream *m_pStream = nullptr;
     AVCodecContext *m_pCodecCtx = nullptr;
     AVFormatContext *m_pFormatCtx = nullptr;

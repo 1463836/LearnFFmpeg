@@ -8,6 +8,7 @@
 
 #ifndef LEARNFFMPEG_MASTER_GLCAMERARENDER_H
 #define LEARNFFMPEG_MASTER_GLCAMERARENDER_H
+
 #include <thread>
 #include <ImageDef.h>
 #include "VideoRender.h"
@@ -17,6 +18,7 @@
 #include <vec2.hpp>
 #include <render/BaseGLRender.h>
 #include <vector>
+
 using namespace glm;
 using namespace std;
 
@@ -35,83 +37,93 @@ using namespace std;
 #define SHADER_INDEX_LUT_C   9
 #define SHADER_INDEX_NE      10  //Negative effect
 
-typedef void (*OnRenderFrameCallback)(void*, NativeImage*);
+typedef void (*OnRenderFrameCallback)(void *, NativeImage *);
 
-class GLCameraRender: public VideoRender, public BaseGLRender{
+class GLCameraRender : public VideoRender, public BaseGLRender {
 public:
     //初始化预览帧的宽高
-    virtual void Init(int videoWidth, int videoHeight, int *dstSize);
+    virtual void init(int videoWidth, int videoHeight, int *dstSize);
+
     //渲染一帧视频
-    virtual void RenderVideoFrame(NativeImage *pImage);
-    virtual void UnInit();
+    virtual void renderVideoFrame(NativeImage *pImage);
+
+    virtual void unInit();
 
     //GLSurfaceView 的三个回调
-    virtual void OnSurfaceCreated();
-    virtual void OnSurfaceChanged(int w, int h);
-    virtual void OnDrawFrame();
+    virtual void onSurfaceCreated();
 
-    static GLCameraRender *GetInstance();
-    static void ReleaseInstance();
+    virtual void onSurfaceChanged(int w, int h);
+
+    virtual void onDrawFrame();
+
+    static GLCameraRender *getInstance();
+
+    static void releaseInstance();
 
     //更新变换矩阵，Camera预览帧需要进行旋转
-    virtual void UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY);
-    virtual void UpdateMVPMatrix(TransformMatrix * pTransformMatrix);
-    virtual void SetTouchLoc(float touchX, float touchY) {
-        m_TouchXY.x = touchX / m_ScreenSize.x;
-        m_TouchXY.y = touchY / m_ScreenSize.y;
+    virtual void updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY);
+
+    virtual void updateMVPMatrix(TransformMatrix *pTransformMatrix);
+
+    virtual void setTouchLoc(float touchX, float touchY) {
+        touchXY.x = touchX / screenSize.x;
+        touchXY.y = touchY / screenSize.y;
     }
 
     //添加好滤镜之后，视频帧的回调，然后将带有滤镜的视频帧放入编码队列
-    void SetRenderCallback(void *ctx, OnRenderFrameCallback callback) {
-        m_CallbackContext = ctx;
-        m_RenderFrameCallback = callback;
+    void setRenderCallback(void *ctx, OnRenderFrameCallback callback) {
+        callbackContext = ctx;
+        renderFrameCallback = callback;
     }
 
     //加载滤镜素材图像
-    void SetLUTImage(int index, NativeImage *pLUTImg);
+    void setLUTImage(int index, NativeImage *pLUTImg);
 
     //加载 Java 层着色器脚本
-    void SetFragShaderStr(int index, char *pShaderStr, int strSize);
+    void setFragShaderStr(int index, char *pShaderStr, int strSize);
 
 private:
     GLCameraRender();
-    virtual ~GLCameraRender();
-    bool CreateFrameBufferObj();
 
-    void GetRenderFrameFromFBO();
+    virtual ~GLCameraRender();
+
+    bool createFrameBufferObj();
+
+    void getRenderFrameFromFBO();
+
     //创建或更新滤镜素材纹理
-    void UpdateExtTexture();
+    void updateExtTexture();
 
     static std::mutex m_Mutex;
-    static GLCameraRender* s_Instance;
-    GLuint m_ProgramObj = GL_NONE;
-    GLuint m_FboProgramObj = GL_NONE;
-    GLuint m_TextureIds[TEXTURE_NUM];
-    GLuint m_VaoId = GL_NONE;
-    GLuint m_VboIds[3];
-    GLuint m_SrcFboTextureId = GL_NONE;
-    GLuint m_SrcFboId = GL_NONE;
-    GLuint m_DstFboTextureId = GL_NONE;
-    GLuint m_DstFboId = GL_NONE;
-    NativeImage m_RenderImage;
-    glm::mat4 m_MVPMatrix;
-    TransformMatrix m_transformMatrix;
+    static GLCameraRender *instance;
+    GLuint programID = GL_NONE;
+    GLuint fboProgramID = GL_NONE;
+    GLuint textureIds[TEXTURE_NUM];
+    GLuint vaoId = GL_NONE;
+    GLuint vboIds[3];
+    GLuint fboTextureId = GL_NONE;
+    GLuint fbo = GL_NONE;
+    GLuint destFboTextureId = GL_NONE;
+    GLuint destFboId = GL_NONE;
+    NativeImage renderImage;
+    glm::mat4 MVPMatrix;
+    TransformMatrix transformMatrix;
 
-    int m_FrameIndex;
-    vec2 m_TouchXY;
-    vec2 m_ScreenSize;
+    int frameIndex;
+    vec2 touchXY;
+    vec2 screenSize;
 
-    OnRenderFrameCallback m_RenderFrameCallback = nullptr;
-    void *m_CallbackContext = nullptr;
+    OnRenderFrameCallback renderFrameCallback = nullptr;
+    void *callbackContext = nullptr;
 
     //支持滑动选择滤镜功能
-    volatile bool m_IsShaderChanged = false;
-    volatile bool m_ExtImageChanged = false;
-    char * m_pFragShaderBuffer = nullptr;
-    NativeImage m_ExtImage;
-    GLuint m_ExtTextureId = GL_NONE;
-    int m_ShaderIndex = 0;
-    mutex m_ShaderMutex;
+    volatile bool isShaderChanged = false;
+    volatile bool extImageChanged = false;
+    char *fragShaderBuffer = nullptr;
+    NativeImage extImage;
+    GLuint extTextureId = GL_NONE;
+    int shaderIndex = 0;
+    mutex shaderMutex;
 
 };
 

@@ -13,19 +13,24 @@
 
 class VideoRender {
 public:
-    VideoRender(int type){
-        m_RenderType = type;
+    VideoRender(int type) {
+        renderType = type;
     }
-    virtual ~VideoRender(){}
-    virtual void Init(int videoWidth, int videoHeight, int *dstSize) = 0;
-    virtual void RenderVideoFrame(NativeImage *pImage) = 0;
-    virtual void UnInit() = 0;
 
-    int GetRenderType() {
-        return m_RenderType;
+    virtual ~VideoRender() {}
+
+    virtual void init(int videoWidth, int videoHeight, int *dstSize) = 0;
+
+    virtual void renderVideoFrame(NativeImage *pImage) = 0;
+
+    virtual void unInit() = 0;
+
+    int getRenderType() {
+        return renderType;
     }
+
 private:
-    int m_RenderType = VIDEO_RENDER_ANWINDOW;
+    int renderType = VIDEO_RENDER_ANWINDOW;
 };
 
 #endif //LEARNFFMPEG_VIDEORENDER_H

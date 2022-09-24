@@ -23,7 +23,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -189,14 +188,14 @@ public class VideoRecorderActivity extends AppCompatActivity implements Camera2F
 
     @Override
     public void onPreviewFrame(byte[] data, int width, int height) {
-        Log.d(TAG, "onPreviewFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
+        //Log.d(TAG, "onPreviewFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
         mMediaRecorder.onPreviewFrame(IMAGE_FORMAT_I420, data, width, height);
         mMediaRecorder.requestRender();
     }
 
     @Override
     public void onCaptureFrame(byte[] data, int width, int height) {
-        Log.d(TAG, "onCaptureFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
+        //Log.d(TAG, "onCaptureFrame() called with: data = [" + data + "], width = [" + width + "], height = [" + height + "]");
     }
 
     private String mOutUrl;
@@ -369,7 +368,7 @@ public class VideoRecorderActivity extends AppCompatActivity implements Camera2F
 
                 String[] strs = previewSizeTitles.get(position).split("x");
                 Size updateSize = new Size(Integer.valueOf(strs[0]), Integer.valueOf(strs[1]));
-                Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
+                //Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
                 mCamera2Wrapper.updatePreviewSize(updateSize);
                 updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
                 dialog.cancel();
@@ -388,7 +387,7 @@ public class VideoRecorderActivity extends AppCompatActivity implements Camera2F
 
                 String[] strs = captureSizeTitles.get(position).split("x");
                 Size updateSize = new Size(Integer.valueOf(strs[0]), Integer.valueOf(strs[1]));
-                Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
+                //Log.d(TAG, "onItemClick() called with: strs[0] = [" + strs[0] + "], strs[1] = [" + strs[1] + "]");
                 mCamera2Wrapper.updatePictureSize(updateSize);
                 updateGLSurfaceViewSize(mCamera2Wrapper.getPreviewSize());
                 dialog.cancel();
@@ -408,7 +407,7 @@ public class VideoRecorderActivity extends AppCompatActivity implements Camera2F
             @SuppressLint("ResourceAsColor")
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
-                Log.d(TAG, "onCheckedChanged() called with: group = [" + group + "], checkedId = [" + checkedId + "]");
+                //Log.d(TAG, "onCheckedChanged() called with: group = [" + group + "], checkedId = [" + checkedId + "]");
                 if (checkedId == R.id.capture_size_btn) {
                     ((RadioButton) rootView.findViewById(R.id.capture_size_btn)).setTextColor(getColor(R.color.colorAccent));
                     ((RadioButton) rootView.findViewById(R.id.preview_size_btn)).setTextColor(getColor(R.color.colorText));
@@ -495,7 +494,7 @@ public class VideoRecorderActivity extends AppCompatActivity implements Camera2F
 
     public static final File getOutFile(final String ext) {
         final File dir = new File(Environment.getExternalStorageDirectory(), RESULT_IMG_DIR);
-        Log.d(TAG, "path=" + dir.toString());
+        //Log.d(TAG, "path=" + dir.toString());
         dir.mkdirs();
         if (dir.canWrite()) {
             return new File(dir, "video_" + getDateTimeString() + ext);

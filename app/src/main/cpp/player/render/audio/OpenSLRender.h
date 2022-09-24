@@ -18,35 +18,47 @@
 
 class OpenSLRender : public AudioRender {
 public:
-    OpenSLRender(){}
-    virtual ~OpenSLRender(){}
+    OpenSLRender() {}
+
+    virtual ~OpenSLRender() {}
+
     virtual void Init();
+
     virtual void ClearAudioCache();
+
     virtual void RenderAudioFrame(uint8_t *pData, int dataSize);
+
     virtual void UnInit();
 
 private:
     int CreateEngine();
+
     int CreateOutputMixer();
+
     int CreateAudioPlayer();
+
     int GetAudioFrameQueueSize();
+
     void StartRender();
+
     void HandleAudioFrameQueue();
+
     static void CreateSLWaitingThread(OpenSLRender *openSlRender);
+
     static void AudioPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueue, void *context);
 
-    SLObjectItf m_EngineObj = nullptr;
-    SLEngineItf m_EngineEngine = nullptr;
-    SLObjectItf m_OutputMixObj = nullptr;
-    SLObjectItf m_AudioPlayerObj = nullptr;
-    SLPlayItf m_AudioPlayerPlay = nullptr;
-    SLVolumeItf m_AudioPlayerVolume = nullptr;
+    SLObjectItf engineObject = nullptr;
+    SLEngineItf engineInterface = nullptr;
+    SLObjectItf outputMixObj = nullptr;
+    SLObjectItf audioPlayerObj = nullptr;
+    SLPlayItf audioPlayerInterface = nullptr;
+    SLVolumeItf audioPlayerVolumeInterface = nullptr;
     SLAndroidSimpleBufferQueueItf m_BufferQueue;
 
     std::queue<AudioFrame *> m_AudioFrameQueue;
 
     std::thread *m_thread = nullptr;
-    std::mutex   m_Mutex;
+    std::mutex m_Mutex;
     std::condition_variable m_Cond;
     volatile bool m_Exit = false;
 };

@@ -28,47 +28,47 @@ extern "C" {
 class VideoDecoder : public DecoderBase {
 
 public:
-    VideoDecoder(char *url){
-        Init(url, AVMEDIA_TYPE_VIDEO);
+    VideoDecoder(char *url) {
+        init(url, AVMEDIA_TYPE_VIDEO);
     }
 
-    virtual ~VideoDecoder(){
-        UnInit();
+    virtual ~VideoDecoder() {
+        unInit();
     }
 
-    int GetVideoWidth()
-    {
-        return m_VideoWidth;
-    }
-    int GetVideoHeight()
-    {
-        return m_VideoHeight;
+    int getVideoWidth() {
+        return videoWidth;
     }
 
-    void SetVideoRender(VideoRender *videoRender)
-    {
-        m_VideoRender = videoRender;
+    int getVideoHeight() {
+        return videoHeight;
+    }
+
+    void setVideoRender(VideoRender *videoRender) {
+        this->videoRender = videoRender;
     }
 
 private:
-    virtual void OnDecoderReady();
-    virtual void OnDecoderDone();
-    virtual void OnFrameAvailable(AVFrame *frame);
+    virtual void onDecoderReady();
+
+    virtual void onDecoderDone();
+
+    virtual void onFrameAvailable(AVFrame *frame);
 
     const AVPixelFormat DST_PIXEL_FORMAT = AV_PIX_FMT_RGBA;
 
-    int m_VideoWidth = 0;
-    int m_VideoHeight = 0;
+    int videoWidth = 0;
+    int videoHeight = 0;
 
-    int m_RenderWidth = 0;
-    int m_RenderHeight = 0;
+    int renderWidth = 0;
+    int renderHeight = 0;
 
-    AVFrame *m_RGBAFrame = nullptr;
-    uint8_t *m_FrameBuffer = nullptr;
+    AVFrame *RGBAFrame = nullptr;
+    uint8_t *frameBuffer = nullptr;
 
-    VideoRender *m_VideoRender = nullptr;
-    SwsContext *m_SwsContext = nullptr;
-    SingleVideoRecorder *m_pVideoRecorder = nullptr;
+    VideoRender *videoRender = nullptr;
+    SwsContext *swsContext = nullptr;
+    SingleVideoRecorder *videoRecorder = nullptr;
 };
 
 

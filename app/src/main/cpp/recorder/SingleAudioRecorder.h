@@ -33,19 +33,25 @@ using namespace std;
 class SingleAudioRecorder {
 public:
     SingleAudioRecorder(const char *outUrl, int sampleRate, int channelLayout, int sampleFormat);
+
     ~SingleAudioRecorder();
+
     //开始录制
     int StartRecord();
+
     //接收音频数据
     int OnFrame2Encode(AudioFrame *inputFrame);
+
     //停止录制
     int StopRecord();
 
 private:
     //编码循环
     static void StartAACEncoderThread(SingleAudioRecorder *context);
+
     //编码一帧的函数
     int EncodeFrame(AVFrame *pFrame);
+
 private:
     ThreadSafeQueue<AudioFrame *> m_frameQueue;
     char m_outUrl[1024] = {0};
@@ -54,10 +60,10 @@ private:
     int m_channelLayout;
     int m_sampleFormat;
     AVPacket m_avPacket;
-    AVFrame  *m_pFrame = nullptr;
+    AVFrame *m_pFrame = nullptr;
     uint8_t *m_pFrameBuffer = nullptr;
     int m_frameBufferSize;
-    AVCodec  *m_pCodec = nullptr;
+    AVCodec *m_pCodec = nullptr;
     AVStream *m_pStream = nullptr;
     AVCodecContext *m_pCodecCtx = nullptr;
     AVFormatContext *m_pFormatCtx = nullptr;

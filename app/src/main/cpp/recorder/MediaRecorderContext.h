@@ -21,57 +21,59 @@
 #define RECORDER_TYPE_SINGLE_AUDIO  1 //仅录制音频
 #define RECORDER_TYPE_AV            2 //同时录制音频和视频,打包成 MP4 文件
 
-class MediaRecorderContext
-{
+class MediaRecorderContext {
 public:
-	MediaRecorderContext();
+    MediaRecorderContext();
 
-	~MediaRecorderContext();
+    ~MediaRecorderContext();
 
-	static void CreateContext(JNIEnv *env, jobject instance);
+    static void createContext(JNIEnv *env, jobject instance);
 
-	static void StoreContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);
+    static void storeContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);
 
-	static void DeleteContext(JNIEnv *env, jobject instance);
+    static void deleteContext(JNIEnv *env, jobject instance);
 
-	static MediaRecorderContext* GetContext(JNIEnv *env, jobject instance);
+    static MediaRecorderContext *getContext(JNIEnv *env, jobject instance);
 
-	static void OnGLRenderFrame(void *ctx, NativeImage * pImage);
+    static void renderFrame(void *ctx, NativeImage *nativeImage);
 
-	int Init();
+    int init();
 
-	int UnInit();
+    int unInit();
 
-    int StartRecord(int recorderType, const char* outUrl, int frameWidth, int frameHeight, long videoBitRate, int fps);
+    int startRecord(int recorderType, const char *outUrl, int frameWidth, int frameHeight,
+                    long videoBitRate, int fps);
 
-    void OnAudioData(uint8_t *pData, int size);
+    void onAudioData(uint8_t *pData, int size);
 
-	void OnPreviewFrame(int format, uint8_t *pBuffer, int width, int height);
+    void previewFrame(int format, uint8_t *pBuffer, int width, int height);
 
-    int StopRecord();
+    int stopRecord();
 
-	void SetTransformMatrix(float translateX, float translateY, float scaleX, float scaleY, int degree, int mirror);
+    void
+    setTransformMatrix(float translateX, float translateY, float scaleX, float scaleY, int degree,
+                       int mirror);
 
-	//OpenGL callback
-	void OnSurfaceCreated();
+    //OpenGL callback
+    void onSurfaceCreated();
 
-	void OnSurfaceChanged(int width, int height);
+    void onSurfaceChanged(int width, int height);
 
-	void OnDrawFrame();
+    void onDrawFrame();
 
-	//加载滤镜素材图像
-	void SetLUTImage(int index, int format, int width, int height, uint8_t *pData);
+    //加载滤镜素材图像
+    void setLUTImage(int index, int format, int width, int height, uint8_t *pData);
 
-	//加载着色器脚本
-	void SetFragShader(int index, char *pShaderStr, int strSize);
+    //加载着色器脚本
+    void setFragShader(int index, char *pShaderStr, int strSize);
 
 private:
-	static jfieldID s_ContextHandle;
-	TransformMatrix m_transformMatrix;
-	SingleVideoRecorder *m_pVideoRecorder = nullptr;
-	SingleAudioRecorder *m_pAudioRecorder = nullptr;
-	MediaRecorder       *m_pAVRecorder    = nullptr;
-	mutex m_mutex;
+    static jfieldID contextHandle;
+    TransformMatrix transformMatrix;
+    SingleVideoRecorder *singleVideoRecorder = nullptr;
+    SingleAudioRecorder *singleAudioRecorder = nullptr;
+    MediaRecorder *mediaRecorder = nullptr;
+    mutex m_mutex;
 
 };
 

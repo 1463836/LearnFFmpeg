@@ -8,6 +8,7 @@ set(libname learn-ffmpeg)
 
 include_directories(
         include
+        include/stbi
         glm
         common
         ${CMAKE_SOURCE_DIR}/recorder
@@ -37,13 +38,13 @@ file(GLOB src-files
         )
 
 add_library( # Sets the name of the library.
-             ${libname}
+        ${libname}
 
-             # Sets the library as a shared library.
-             SHARED
+        # Sets the library as a shared library.
+        SHARED
 
-             # Provides a relative path to your source file(s).
-             ${src-files}
+        # Provides a relative path to your source file(s).
+        ${src-files}
         )
 
 #add_library(avutil
@@ -115,11 +116,11 @@ set(native-libs
         )
 
 target_link_libraries( # Specifies the target library.
-                       ${libname}
+        ${libname}
 
-                       # Links the target library to the log library
-                       # included in the NDK.
-                       ${log-lib}
-                       ${third-party-libs}
-                       ${native-libs}
-                       )
+        # Links the target library to the log library
+        # included in the NDK.
+        ${log-lib}
+        ${third-party-libs}
+        ${native-libs}
+        )

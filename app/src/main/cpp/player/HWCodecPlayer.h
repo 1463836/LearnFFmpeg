@@ -38,74 +38,89 @@ enum PlayerState {
 
 class HWCodecPlayer : public MediaPlayer {
 public:
-    HWCodecPlayer(){};
-    virtual ~HWCodecPlayer(){};
+    HWCodecPlayer() {};
 
-    virtual void Init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface);
-    virtual void UnInit();
+    virtual ~HWCodecPlayer() {};
 
-    virtual void Play();
-    virtual void Pause();
-    virtual void Stop();
-    virtual void SeekToPosition(float position);
-    virtual long GetMediaParams(int paramType);
-    virtual void SetMediaParams(int paramType, jobject obj);
+    virtual void init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface);
+
+    virtual void unInit();
+
+    virtual void play();
+
+    virtual void pause();
+
+    virtual void stop();
+
+    virtual void seekToPosition(float position);
+
+    virtual long getMediaParams(int paramType);
+
+    virtual void setMediaParams(int paramType, jobject obj);
 
 private:
-    virtual JNIEnv *GetJNIEnv(bool *isAttach);
-    virtual jobject GetJavaObj();
-    virtual JavaVM *GetJavaVM();
+    virtual JNIEnv *getJNIEnv(bool *isAttach);
+
+    virtual jobject getJavaObj();
+
+    virtual JavaVM *getJavaVM();
+
     void AVSync();
 
 
     int InitDecoder();
+
     int DoMuxLoop();
+
     int UnInitDecoder();
 
     static void PostMessage(void *context, int msgType, float msgCode);
-    static void DeMuxThreadProc(HWCodecPlayer* player);
-    static void AudioDecodeThreadProc(HWCodecPlayer* player);
-    static void VideoDecodeThreadProc(HWCodecPlayer* player);
+
+    static void DeMuxThreadProc(HWCodecPlayer *player);
+
+    static void AudioDecodeThreadProc(HWCodecPlayer *player);
+
+    static void VideoDecodeThreadProc(HWCodecPlayer *player);
 
 private:
-    AVPacketQueue*    m_VideoPacketQueue = nullptr;
-    AVPacketQueue*    m_AudioPacketQueue = nullptr;
-    AVFormatContext*   m_AVFormatContext = nullptr;
-    char                 m_Url[MAX_PATH] = {0};
-    AMediaCodec*            m_MediaCodec = nullptr;
-    AMediaExtractor*    m_MediaExtractor = nullptr;
-    AVBitStreamFilterContext*     m_Bsfc = nullptr;
-    AVCodecContext*      m_AudioCodecCtx = nullptr;
-    AVCodecContext*      m_VideoCodecCtx = nullptr;
-    AVRational           m_VideoTimeBase = {0};
-    AVRational           m_AudioTimeBase = {0};
-    SwrContext*                 m_SwrCtx = nullptr;
-    ANativeWindow*       m_ANativeWindow = nullptr;
-    long                      m_Duration = 0;
+    AVPacketQueue *m_VideoPacketQueue = nullptr;
+    AVPacketQueue *m_AudioPacketQueue = nullptr;
+    AVFormatContext *m_AVFormatContext = nullptr;
+    char m_Url[MAX_PATH] = {0};
+    AMediaCodec *m_MediaCodec = nullptr;
+    AMediaExtractor *m_MediaExtractor = nullptr;
+    AVBitStreamFilterContext *m_Bsfc = nullptr;
+    AVCodecContext *m_AudioCodecCtx = nullptr;
+    AVCodecContext *m_VideoCodecCtx = nullptr;
+    AVRational m_VideoTimeBase = {0};
+    AVRational m_AudioTimeBase = {0};
+    SwrContext *m_SwrCtx = nullptr;
+    ANativeWindow *m_ANativeWindow = nullptr;
+    long m_Duration = 0;
 
-    thread*              m_DeMuxThread   = nullptr;
-    thread*              m_ADecodeThread = nullptr;
-    thread*              m_VDecodeThread = nullptr;
-    jobject              m_AssetMgr      = nullptr;
+    thread *m_DeMuxThread = nullptr;
+    thread *m_ADecodeThread = nullptr;
+    thread *m_VDecodeThread = nullptr;
+    jobject m_AssetMgr = nullptr;
 
-    PlayerState            m_PlayerState = PLAYER_STATE_UNKNOWN;
-    volatile float        m_SeekPosition = -1;
-    volatile bool          m_SeekSuccess = false;
-    int                 m_VideoStreamIdx = -1;
-    int                 m_AudioStreamIdx = -1;
-    double              m_VideoStartBase = -1.0;
-    double              m_AudioStartBase = -1.0;
-    double             m_CommonStartBase = -1.0;
+    PlayerState m_PlayerState = PLAYER_STATE_UNKNOWN;
+    volatile float m_SeekPosition = -1;
+    volatile bool m_SeekSuccess = false;
+    int m_VideoStreamIdx = -1;
+    int m_AudioStreamIdx = -1;
+    double m_VideoStartBase = -1.0;
+    double m_AudioStartBase = -1.0;
+    double m_CommonStartBase = -1.0;
 
 
     //锁和条件变量
-    mutex               m_Mutex;
-    mutex               m_VideoBufMutex;
-    mutex               m_AudioBufMutex;
-    condition_variable  m_Cond;
-    SyncClock           m_VideoClock;
-    SyncClock           m_AudioClock;
-    AVRational          m_FrameRate;
+    mutex m_Mutex;
+    mutex m_VideoBufMutex;
+    mutex m_AudioBufMutex;
+    condition_variable m_Cond;
+    SyncClock m_VideoClock;
+    SyncClock m_AudioClock;
+    AVRational m_FrameRate;
 };
 
 

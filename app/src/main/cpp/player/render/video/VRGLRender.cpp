@@ -11,7 +11,7 @@
 #include <GLUtils.h>
 #include <gtc/matrix_transform.hpp>
 
-VRGLRender* VRGLRender::s_Instance = nullptr;
+VRGLRender *VRGLRender::s_Instance = nullptr;
 std::mutex VRGLRender::m_Mutex;
 
 static char vShaderStr[] =
@@ -145,7 +145,7 @@ static char fGrayShaderStr[] =
 //
 //GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
 
-VRGLRender::VRGLRender():VideoRender(VIDEO_RENDER_3D_VR) {
+VRGLRender::VRGLRender() : VideoRender(VIDEO_RENDER_3D_VR) {
 
 }
 
@@ -154,8 +154,8 @@ VRGLRender::~VRGLRender() {
 
 }
 
-void VRGLRender::Init(int videoWidth, int videoHeight, int *dstSize) {
-    LOGCATE("VRGLRender::InitRender video[w, h]=[%d, %d]", videoWidth, videoHeight);
+void VRGLRender::init(int videoWidth, int videoHeight, int *dstSize) {
+//    LOGCATE("VRGLRender::InitRender video[w, h]=[%d, %d]", videoWidth, videoHeight);
     dstSize[0] = videoWidth;
     dstSize[1] = videoHeight;
     m_FrameIndex = 0;
@@ -164,13 +164,12 @@ void VRGLRender::Init(int videoWidth, int videoHeight, int *dstSize) {
 
 }
 
-void VRGLRender::RenderVideoFrame(NativeImage *pImage) {
-    LOGCATE("VRGLRender::RenderVideoFrame pImage=%p, format=%d", pImage, pImage->format);
-    if(pImage == nullptr || pImage->ppPlane[0] == nullptr)
+void VRGLRender::renderVideoFrame(NativeImage *pImage) {
+//    LOGCATE("VRGLRender::RenderVideoFrame pImage=%p, format=%d", pImage, pImage->format);
+    if (pImage == nullptr || pImage->inData[0] == nullptr)
         return;
     std::unique_lock<std::mutex> lock(m_Mutex);
-    if(m_RenderImage.ppPlane[0] == nullptr)
-    {
+    if (m_RenderImage.inData[0] == nullptr) {
         m_RenderImage.format = pImage->format;
         m_RenderImage.width = pImage->width;
         m_RenderImage.height = pImage->height;
@@ -181,7 +180,7 @@ void VRGLRender::RenderVideoFrame(NativeImage *pImage) {
     //m_pSingleVideoRecorder->OnFrame2Encode(pImage);
 }
 
-void VRGLRender::UnInit() {
+void VRGLRender::unInit() {
 //    if(m_pSingleVideoRecorder != nullptr) {
 //        m_pSingleVideoRecorder->StopRecord();
 //        delete m_pSingleVideoRecorder;
@@ -189,8 +188,7 @@ void VRGLRender::UnInit() {
 //    }
 }
 
-void VRGLRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY)
-{
+void VRGLRender::updateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) {
     angleX = angleX % 360;
     angleY = angleY % 360;
 
@@ -221,19 +219,18 @@ void VRGLRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float sca
 
 }
 
-void VRGLRender::OnSurfaceCreated() {
-    LOGCATE("VRGLRender::OnSurfaceCreated");
+void VRGLRender::onSurfaceCreated() {
+//    LOGCATE("VRGLRender::OnSurfaceCreated");
 
     m_ProgramObj = GLUtils::CreateProgram(vShaderStr, fShaderStr);
-    if (!m_ProgramObj)
-    {
+    if (!m_ProgramObj) {
         LOGCATE("VRGLRender::OnSurfaceCreated create program fail");
         return;
     }
     GenerateMesh();
 
     glGenTextures(TEXTURE_NUM, m_TextureIds);
-    for (int i = 0; i < TEXTURE_NUM ; ++i) {
+    for (int i = 0; i < TEXTURE_NUM; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, m_TextureIds[i]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -246,10 +243,12 @@ void VRGLRender::OnSurfaceCreated() {
     // Generate VBO Ids and load the VBOs with data
     glGenBuffers(2, m_VboIds);
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * m_VertexCoords.size(), &m_VertexCoords[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * m_VertexCoords.size(), &m_VertexCoords[0],
+                 GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vec2) * m_TextureCoords.size(), &m_TextureCoords[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vec2) * m_TextureCoords.size(), &m_TextureCoords[0],
+                 GL_STATIC_DRAW);
 
     // Generate VAO Id
     glGenVertexArrays(1, &m_VaoId);
@@ -257,12 +256,12 @@ void VRGLRender::OnSurfaceCreated() {
 
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (const void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (const void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
     glBindVertexArray(GL_NONE);
@@ -270,30 +269,30 @@ void VRGLRender::OnSurfaceCreated() {
     m_TouchXY = vec2(0.5f, 0.5f);
 }
 
-void VRGLRender::OnSurfaceChanged(int w, int h) {
-    LOGCATE("VRGLRender::OnSurfaceChanged [w, h]=[%d, %d]", w, h);
+void VRGLRender::onSurfaceChanged(int w, int h) {
+//    LOGCATE("VRGLRender::OnSurfaceChanged [w, h]=[%d, %d]", w, h);
     m_ScreenSize.x = w;
     m_ScreenSize.y = h;
     glViewport(0, 0, w, h);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    UpdateMVPMatrix(0, 0, 1.0f, 1.0f);
+    updateMVPMatrix(0, 0, 1.0f, 1.0f);
 }
 
-void VRGLRender::OnDrawFrame() {
+void VRGLRender::onDrawFrame() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if(m_ProgramObj == GL_NONE || m_RenderImage.ppPlane[0] == nullptr) return;
-    LOGCATE("VRGLRender::OnDrawFrame [w, h]=[%d, %d]", m_RenderImage.width, m_RenderImage.height);
+    if (m_ProgramObj == GL_NONE || m_RenderImage.inData[0] == nullptr) return;
+//    LOGCATE("VRGLRender::OnDrawFrame [w, h]=[%d, %d]", m_RenderImage.width, m_RenderImage.height);
     m_FrameIndex++;
     //glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     // upload image data
     std::unique_lock<std::mutex> lock(m_Mutex);
-    switch (m_RenderImage.format)
-    {
+    switch (m_RenderImage.format) {
         case IMAGE_FORMAT_RGBA:
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.width, m_RenderImage.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_RenderImage.ppPlane[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.width, m_RenderImage.height, 0,
+                         GL_RGBA, GL_UNSIGNED_BYTE, m_RenderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         case IMAGE_FORMAT_NV21:
@@ -303,7 +302,7 @@ void VRGLRender::OnDrawFrame() {
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width,
                          m_RenderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[0]);
+                         m_RenderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update UV plane data
@@ -311,7 +310,7 @@ void VRGLRender::OnDrawFrame() {
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[1]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, m_RenderImage.width >> 1,
                          m_RenderImage.height >> 1, 0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[1]);
+                         m_RenderImage.inData[1]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         case IMAGE_FORMAT_I420:
@@ -320,7 +319,7 @@ void VRGLRender::OnDrawFrame() {
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width,
                          m_RenderImage.height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[0]);
+                         m_RenderImage.inData[0]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update U plane data
@@ -328,7 +327,7 @@ void VRGLRender::OnDrawFrame() {
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[1]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width >> 1,
                          m_RenderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[1]);
+                         m_RenderImage.inData[1]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
             //update V plane data
@@ -336,7 +335,7 @@ void VRGLRender::OnDrawFrame() {
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[2]);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, m_RenderImage.width >> 1,
                          m_RenderImage.height >> 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                         m_RenderImage.ppPlane[2]);
+                         m_RenderImage.inData[2]);
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         default:
@@ -346,7 +345,7 @@ void VRGLRender::OnDrawFrame() {
 
 
     // Use the program object
-    glUseProgram (m_ProgramObj);
+    glUseProgram(m_ProgramObj);
 
     glBindVertexArray(m_VaoId);
 
@@ -373,12 +372,10 @@ void VRGLRender::OnDrawFrame() {
 
 }
 
-VRGLRender *VRGLRender::GetInstance() {
-    if(s_Instance == nullptr)
-    {
+VRGLRender *VRGLRender::getInstance() {
+    if (s_Instance == nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance == nullptr)
-        {
+        if (s_Instance == nullptr) {
             s_Instance = new VRGLRender();
         }
 
@@ -387,11 +384,9 @@ VRGLRender *VRGLRender::GetInstance() {
 }
 
 void VRGLRender::ReleaseInstance() {
-    if(s_Instance != nullptr)
-    {
+    if (s_Instance != nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance != nullptr)
-        {
+        if (s_Instance != nullptr) {
             delete s_Instance;
             s_Instance = nullptr;
         }

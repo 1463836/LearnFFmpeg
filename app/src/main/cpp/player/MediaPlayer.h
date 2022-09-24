@@ -25,25 +25,34 @@
 
 class MediaPlayer {
 public:
-    MediaPlayer(){};
-    virtual ~MediaPlayer(){};
+    MediaPlayer() {};
 
-    virtual void Init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface) = 0;
-    virtual void UnInit() = 0;
+    virtual ~MediaPlayer() {};
 
-    virtual void Play() = 0;
-    virtual void Pause() = 0;
-    virtual void Stop() = 0;
-    virtual void SeekToPosition(float position) = 0;
-    virtual long GetMediaParams(int paramType) = 0;
-    virtual void SetMediaParams(int paramType, jobject obj){}
+    virtual void init(JNIEnv *jniEnv, jobject obj, char *url, int renderType, jobject surface) = 0;
 
-    virtual JNIEnv *GetJNIEnv(bool *isAttach) = 0;
-    virtual jobject GetJavaObj() = 0;
-    virtual JavaVM *GetJavaVM() = 0;
+    virtual void unInit() = 0;
 
-    JavaVM *m_JavaVM = nullptr;
-    jobject m_JavaObj = nullptr;
+    virtual void play() = 0;
+
+    virtual void pause() = 0;
+
+    virtual void stop() = 0;
+
+    virtual void seekToPosition(float position) = 0;
+
+    virtual long getMediaParams(int paramType) = 0;
+
+    virtual void setMediaParams(int paramType, jobject obj) {}
+
+    virtual JNIEnv *getJNIEnv(bool *isAttach) = 0;
+
+    virtual jobject getJavaObj() = 0;
+
+    virtual JavaVM *getJavaVM() = 0;
+
+    JavaVM *javaVM = nullptr;
+    jobject javaObj = nullptr;
 };
 
 #endif //LEARNFFMPEG_MEDIAPLAYER_H

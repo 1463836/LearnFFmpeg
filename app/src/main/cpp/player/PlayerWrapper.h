@@ -18,21 +18,29 @@ static const int HWCODEC_PLAYER = 1;
 
 class PlayerWrapper {
 public:
-    PlayerWrapper(){};
-    virtual ~PlayerWrapper(){};
+    PlayerWrapper() {};
 
-    void Init(JNIEnv *jniEnv, jobject obj, char *url, int playerType, int renderType, jobject surface);
-    void UnInit();
+    virtual ~PlayerWrapper() {};
 
-    void Play();
-    void Pause();
-    void Stop();
-    void SeekToPosition(float position);
-    long GetMediaParams(int paramType);
-    void SetMediaParams(int paramType, jobject obj);
+    void
+    init(JNIEnv *jniEnv, jobject obj, char *url, int playerType, int renderType, jobject surface);
+
+    void unInit();
+
+    void play();
+
+    void pause();
+
+    void stop();
+
+    void seekToPosition(float position);
+
+    long getMediaParams(int paramType);
+
+    void setMediaParams(int paramType, jobject obj);
 
 private:
-    MediaPlayer* m_MediaPlayer = nullptr;
+    MediaPlayer *mediaPlayer = nullptr;
 
 };
 

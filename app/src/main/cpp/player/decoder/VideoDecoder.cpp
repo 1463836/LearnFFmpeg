@@ -9,141 +9,147 @@
 
 #include "VideoDecoder.h"
 
-void VideoDecoder::OnDecoderReady() {
-    LOGCATE("VideoDecoder::OnDecoderReady");
-    m_VideoWidth = GetCodecContext()->width;
-    m_VideoHeight = GetCodecContext()->height;
+void VideoDecoder::onDecoderReady() {
+//    LOGCATE("VideoDecoder::OnDecoderReady");
+    videoWidth = getCodecContext()->width;
+    videoHeight = getCodecContext()->height;
 
-    if(m_MsgContext && m_MsgCallback)
-        m_MsgCallback(m_MsgContext, MSG_DECODER_READY, 0);
+    if (msgContext && msgCallback)
+        msgCallback(msgContext, MSG_DECODER_READY, 0);
 
-    if(m_VideoRender != nullptr) {
+    if (videoRender != nullptr) {
         int dstSize[2] = {0};
-        m_VideoRender->Init(m_VideoWidth, m_VideoHeight, dstSize);
-        m_RenderWidth = dstSize[0];
-        m_RenderHeight = dstSize[1];
+        videoRender->init(videoWidth, videoHeight, dstSize);
+        renderWidth = dstSize[0];
+        renderHeight = dstSize[1];
 
-        if(m_VideoRender->GetRenderType() == VIDEO_RENDER_ANWINDOW) {
+        if (videoRender->getRenderType() == VIDEO_RENDER_ANWINDOW) {
             int fps = 25;
-            long videoBitRate = m_RenderWidth * m_RenderHeight * fps * 0.2;
-            m_pVideoRecorder = new SingleVideoRecorder("/sdcard/learnffmpeg_output.mp4", m_RenderWidth, m_RenderHeight, videoBitRate, fps);
-            m_pVideoRecorder->StartRecord();
+            long videoBitRate = renderWidth * renderHeight * fps * 0.2;
+            videoRecorder = new SingleVideoRecorder("/sdcard/learnffmpeg_output.mp4",
+                                                    renderWidth, renderHeight, videoBitRate,
+                                                    fps);
+            videoRecorder->StartRecord();
         }
 
-        m_RGBAFrame = av_frame_alloc();
-        int bufferSize = av_image_get_buffer_size(DST_PIXEL_FORMAT, m_RenderWidth, m_RenderHeight, 1);
-        m_FrameBuffer = (uint8_t *) av_malloc(bufferSize * sizeof(uint8_t));
-        av_image_fill_arrays(m_RGBAFrame->data, m_RGBAFrame->linesize,
-                             m_FrameBuffer, DST_PIXEL_FORMAT, m_RenderWidth, m_RenderHeight, 1);
+        RGBAFrame = av_frame_alloc();
+        int bufferSize = av_image_get_buffer_size(DST_PIXEL_FORMAT, renderWidth, renderHeight,
+                                                  1);
+        frameBuffer = (uint8_t *) av_malloc(bufferSize * sizeof(uint8_t));
+        av_image_fill_arrays(RGBAFrame->data, RGBAFrame->linesize,
+                             frameBuffer, DST_PIXEL_FORMAT, renderWidth, renderHeight, 1);
 
-        m_SwsContext = sws_getContext(m_VideoWidth, m_VideoHeight, GetCodecContext()->pix_fmt,
-                                      m_RenderWidth, m_RenderHeight, DST_PIXEL_FORMAT,
-                                      SWS_FAST_BILINEAR, NULL, NULL, NULL);
+        swsContext = sws_getContext(videoWidth, videoHeight, getCodecContext()->pix_fmt,
+                                    renderWidth, renderHeight, DST_PIXEL_FORMAT,
+                                    SWS_FAST_BILINEAR, NULL, NULL, NULL);
     } else {
         LOGCATE("VideoDecoder::OnDecoderReady m_VideoRender == null");
     }
 }
 
-void VideoDecoder::OnDecoderDone() {
-    LOGCATE("VideoDecoder::OnDecoderDone");
+void VideoDecoder::onDecoderDone() {
+//    LOGCATE("VideoDecoder::OnDecoderDone");
 
-    if(m_MsgContext && m_MsgCallback)
-        m_MsgCallback(m_MsgContext, MSG_DECODER_DONE, 0);
+    if (msgContext && msgCallback)
+        msgCallback(msgContext, MSG_DECODER_DONE, 0);
 
-    if(m_VideoRender)
-        m_VideoRender->UnInit();
+    if (videoRender)
+        videoRender->unInit();
 
-    if(m_RGBAFrame != nullptr) {
-        av_frame_free(&m_RGBAFrame);
-        m_RGBAFrame = nullptr;
+    if (RGBAFrame != nullptr) {
+        av_frame_free(&RGBAFrame);
+        RGBAFrame = nullptr;
     }
 
-    if(m_FrameBuffer != nullptr) {
-        free(m_FrameBuffer);
-        m_FrameBuffer = nullptr;
+    if (frameBuffer != nullptr) {
+        free(frameBuffer);
+        frameBuffer = nullptr;
     }
 
-    if(m_SwsContext != nullptr) {
-        sws_freeContext(m_SwsContext);
-        m_SwsContext = nullptr;
+    if (swsContext != nullptr) {
+        sws_freeContext(swsContext);
+        swsContext = nullptr;
     }
 
-    if(m_pVideoRecorder != nullptr) {
-        m_pVideoRecorder->StopRecord();
-        delete m_pVideoRecorder;
-        m_pVideoRecorder = nullptr;
+    if (videoRecorder != nullptr) {
+        videoRecorder->StopRecord();
+        delete videoRecorder;
+        videoRecorder = nullptr;
     }
 
 }
 
-void VideoDecoder::OnFrameAvailable(AVFrame *frame) {
-    LOGCATE("VideoDecoder::OnFrameAvailable frame=%p", frame);
-    if(m_VideoRender != nullptr && frame != nullptr) {
+void VideoDecoder::onFrameAvailable(AVFrame *frame) {
+//    LOGCATE("VideoDecoder::OnFrameAvailable frame=%p", frame);
+    if (videoRender != nullptr && frame != nullptr) {
         NativeImage image;
-        LOGCATE("VideoDecoder::OnFrameAvailable frame[w,h]=[%d, %d],format=%d,[line0,line1,line2]=[%d, %d, %d]", frame->width, frame->height, GetCodecContext()->pix_fmt, frame->linesize[0], frame->linesize[1],frame->linesize[2]);
-        if(m_VideoRender->GetRenderType() == VIDEO_RENDER_ANWINDOW)
-        {
-            sws_scale(m_SwsContext, frame->data, frame->linesize, 0,
-                      m_VideoHeight, m_RGBAFrame->data, m_RGBAFrame->linesize);
+//        LOGCATE("VideoDecoder::OnFrameAvailable frame[w,h]=[%d, %d],format=%d,[line0,line1,line2]=[%d, %d, %d]",
+//                frame->width, frame->height, GetCodecContext()->pix_fmt, frame->linesize[0],
+//                frame->linesize[1], frame->linesize[2]);
+        if (videoRender->getRenderType() == VIDEO_RENDER_ANWINDOW) {
+            sws_scale(swsContext, frame->data, frame->linesize, 0,
+                      videoHeight, RGBAFrame->data, RGBAFrame->linesize);
 
             image.format = IMAGE_FORMAT_RGBA;
-            image.width = m_RenderWidth;
-            image.height = m_RenderHeight;
-            image.ppPlane[0] = m_RGBAFrame->data[0];
-            image.pLineSize[0] = image.width * 4;
-        } else if(GetCodecContext()->pix_fmt == AV_PIX_FMT_YUV420P || GetCodecContext()->pix_fmt == AV_PIX_FMT_YUVJ420P) {
+            image.width = renderWidth;
+            image.height = renderHeight;
+            image.inData[0] = RGBAFrame->data[0];
+            image.inSize[0] = image.width * 4;
+        } else if (getCodecContext()->pix_fmt == AV_PIX_FMT_YUV420P ||
+                getCodecContext()->pix_fmt == AV_PIX_FMT_YUVJ420P) {
             image.format = IMAGE_FORMAT_I420;
             image.width = frame->width;
             image.height = frame->height;
-            image.pLineSize[0] = frame->linesize[0];
-            image.pLineSize[1] = frame->linesize[1];
-            image.pLineSize[2] = frame->linesize[2];
-            image.ppPlane[0] = frame->data[0];
-            image.ppPlane[1] = frame->data[1];
-            image.ppPlane[2] = frame->data[2];
-            if(frame->data[0] && frame->data[1] && !frame->data[2] && frame->linesize[0] == frame->linesize[1] && frame->linesize[2] == 0) {
+            image.inSize[0] = frame->linesize[0];
+            image.inSize[1] = frame->linesize[1];
+            image.inSize[2] = frame->linesize[2];
+            image.inData[0] = frame->data[0];
+            image.inData[1] = frame->data[1];
+            image.inData[2] = frame->data[2];
+            if (frame->data[0] && frame->data[1] && !frame->data[2] &&
+                frame->linesize[0] == frame->linesize[1] && frame->linesize[2] == 0) {
                 // on some android device, output of h264 mediacodec decoder is NV12 兼容某些设备可能出现的格式不匹配问题
                 image.format = IMAGE_FORMAT_NV12;
             }
-        } else if (GetCodecContext()->pix_fmt == AV_PIX_FMT_NV12) {
+        } else if (getCodecContext()->pix_fmt == AV_PIX_FMT_NV12) {
             image.format = IMAGE_FORMAT_NV12;
             image.width = frame->width;
             image.height = frame->height;
-            image.pLineSize[0] = frame->linesize[0];
-            image.pLineSize[1] = frame->linesize[1];
-            image.ppPlane[0] = frame->data[0];
-            image.ppPlane[1] = frame->data[1];
-        } else if (GetCodecContext()->pix_fmt == AV_PIX_FMT_NV21) {
+            image.inSize[0] = frame->linesize[0];
+            image.inSize[1] = frame->linesize[1];
+            image.inData[0] = frame->data[0];
+            image.inData[1] = frame->data[1];
+        } else if (getCodecContext()->pix_fmt == AV_PIX_FMT_NV21) {
             image.format = IMAGE_FORMAT_NV21;
             image.width = frame->width;
             image.height = frame->height;
-            image.pLineSize[0] = frame->linesize[0];
-            image.pLineSize[1] = frame->linesize[1];
-            image.ppPlane[0] = frame->data[0];
-            image.ppPlane[1] = frame->data[1];
-        } else if (GetCodecContext()->pix_fmt == AV_PIX_FMT_RGBA) {
+            image.inSize[0] = frame->linesize[0];
+            image.inSize[1] = frame->linesize[1];
+            image.inData[0] = frame->data[0];
+            image.inData[1] = frame->data[1];
+        } else if (getCodecContext()->pix_fmt == AV_PIX_FMT_RGBA) {
             image.format = IMAGE_FORMAT_RGBA;
             image.width = frame->width;
             image.height = frame->height;
-            image.pLineSize[0] = frame->linesize[0];
-            image.ppPlane[0] = frame->data[0];
+            image.inSize[0] = frame->linesize[0];
+            image.inData[0] = frame->data[0];
         } else {
-            sws_scale(m_SwsContext, frame->data, frame->linesize, 0,
-                      m_VideoHeight, m_RGBAFrame->data, m_RGBAFrame->linesize);
+            sws_scale(swsContext, frame->data, frame->linesize, 0,
+                      videoHeight, RGBAFrame->data, RGBAFrame->linesize);
             image.format = IMAGE_FORMAT_RGBA;
-            image.width = m_RenderWidth;
-            image.height = m_RenderHeight;
-            image.ppPlane[0] = m_RGBAFrame->data[0];
-            image.pLineSize[0] = image.width * 4;
+            image.width = renderWidth;
+            image.height = renderHeight;
+            image.inData[0] = RGBAFrame->data[0];
+            image.inSize[0] = image.width * 4;
         }
 
-        m_VideoRender->RenderVideoFrame(&image);
+        videoRender->renderVideoFrame(&image);
 
-        if(m_pVideoRecorder != nullptr) {
-            m_pVideoRecorder->OnFrame2Encode(&image);
+        if (videoRecorder != nullptr) {
+            videoRecorder->OnFrame2Encode(&image);
         }
     }
 
-    if(m_MsgContext && m_MsgCallback)
-        m_MsgCallback(m_MsgContext, MSG_REQUEST_RENDER, 0);
+    if (msgContext && msgCallback)
+        msgCallback(msgContext, MSG_REQUEST_RENDER, 0);
 }

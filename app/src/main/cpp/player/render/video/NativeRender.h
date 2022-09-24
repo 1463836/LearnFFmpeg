@@ -15,14 +15,18 @@
 
 #include "VideoRender.h"
 
-class NativeRender : public VideoRender{
+class NativeRender : public VideoRender {
 
 public:
     NativeRender(JNIEnv *env, jobject surface);
+
     virtual ~NativeRender();
-    virtual void Init(int videoWidth, int videoHeight, int *dstSize);
-    virtual void RenderVideoFrame(NativeImage *pImage);
-    virtual void UnInit();
+
+    virtual void init(int videoWidth, int videoHeight, int *dstSize);
+
+    virtual void renderVideoFrame(NativeImage *pImage);
+
+    virtual void unInit();
 
 private:
     ANativeWindow_Buffer m_NativeWindowBuffer;
